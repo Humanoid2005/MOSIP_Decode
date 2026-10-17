@@ -1,0 +1,164 @@
+{
+  "realm": "inji",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "inji-wallet",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-jwt",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://inji.127.0.0.1.sslip.io/redirect",
+        "io.mosip.residentapp.inji://oauthredirect"
+      ],
+      "attributes": {
+        "jwt.credential.certificate": "MIID5TCCAk2gAwIBAgIIW7Dvj8LVYngwDQYJKoZIhvcNAQEMBQAwITEfMB0GA1UEAxMWSW5qaSBMb2NhbCBEZXZlbG9wbWVudDAeFw0yNjEwMTcxMzMyNThaFw0yNzEwMTcxMzMyNThaMCExHzAdBgNVBAMTFkluamkgTG9jYWwgRGV2ZWxvcG1lbnQwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQCVqhi55/pBDkxn+TaeRJqCfEjT6vxw4eKszVBivt59+E2eOz5W2KI5Nm0fBAbZRP/N5UFsuH7p2Zw4eg7g7jIsauwsuTAkhgEiBF6xsaCwRvl10wCgyMRnLyYXtpBSROzL6VnlctGApn2IYSjfpuRyTGlJYNqp3a6001I0SDivQ2IzFAYNBDTEQ4zGl01u6nTQoth3ziEOfW04H7iXLiOGvVRKmrTXfJSQ3nBZl56Kx66FkCK13glguQPTdtgBpFN9F3Io0xOAhiq02ibkraW1Xw9tL828Ng7V0LTMhY+eX/i20YhPrIW4ikm0/W3xpPbp4eH+YhKUBbuPamXs2HcwDiCkPEq8lgP863f9KmpB7/TAIySW1GOfuITtFzalkMVYd8xHU02iXCaHHFlxmd926TgqHDDS0v3FgvAn1H3a2FY/gpwo/vu9s15j++SQr8kD5Oc1INiZm7CKdUMgl4aeit+Mlu0d3onJt70QPyIeDsTqPKItbFY+CuloTIiBU40CAwEAAaMhMB8wHQYDVR0OBBYEFLvqm8sr0lfxOhSEoPE34CAQX2iNMA0GCSqGSIb3DQEBDAUAA4IBgQASAQy90p9UWPdbvZ8xzQ49CoSnOZyMIW33QP5+C4g3gSoI1gyVWGTVFQ40ZMg++zs48mAD66MCCgyz3+CIbuG7OPb3805lFxdagNcUKk0sYbqeSDOAKZ/+7fahgx+yzk9g7kfP0D8FJ0B0leF49/TqJb7m3TEJQD0267rer/eM4DleypCdj19WhItgPnzPSFSJCSORYuithVaTivCkW7rnIBLjNEM6g37GyxPSwm2Q2Kp68QCArEb85hT/lXZdzK4ZVu0IXR+CpKQB1piJzoXQa9bGrOd+rCHCwHOxwR6b5axiB/cKa4w4mYOLRxCLzquLrhBpo/xbLmTCzYa0RMmVDc6zTFQEvUtMruWZztxZ6ipmW9UyRl7wMkrqOYMtfMnlxj1VcAmD7pgsi2+AKTSGD213JRb4Mc2Mrp/yPe/X886qtY3PVpsXUdS8byQwwPLYT+6POOCpJSTkXofBIvtodnBdEnCpiRK81cXyLZ+lchtnBza3bTOEYuNQptXicnQ=",
+        "use.jwks.url": "false"
+      },
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "basic",
+        "mock_identity_vc_ldp"
+      ]
+    },
+    {
+      "clientId": "inji-web-login",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "975b3ffa44048d8ce2e976bd68f4bbfec9148e883d00c2a3",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://inji.127.0.0.1.sslip.io/v1/mimoto/oauth2/callback/google"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "basic",
+        "openid"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "basic",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "openid",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mock_identity_vc_ldp",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "credential-nonce",
+          "protocol": "openid-connect",
+          "protocolMapper": "inji-credential-nonce",
+          "config": {}
+        },
+        {
+          "name": "credential-client",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "client_id",
+            "claim.value": "inji-wallet",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "credential-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "https://inji.127.0.0.1.sslip.io/v1/certify/issuance/credential",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "2154189532",
+      "username": "farmer",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "farmer@example.test",
+      "firstName": "Gorge",
+      "lastName": "Cooper",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "5d4d8c954861b69ec56bb275289c481637135a67a4cc641c",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

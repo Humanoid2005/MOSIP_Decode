@@ -1,0 +1,199 @@
+name: inji-playground
+services:
+  database:
+    image: postgres:15.10
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ./infra/inji/generated/database
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  certify:
+    image: injistack/inji-certify-with-plugins:0.14.0
+    user: root
+    environment:
+      container_user: mosip
+      active_profile_env: default,csvdp-farmer
+      SPRING_CONFIG_NAME: certify
+      SPRING_CONFIG_LOCATION: /home/mosip/config/
+      enable_certify_artifactory: "false"
+      download_hsm_client: "false"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      CERTIFY_KEYSTORE_PASSWORD: ${CERTIFY_KEYSTORE_PASSWORD:?Set CERTIFY_KEYSTORE_PASSWORD}
+    volumes:
+      - type: bind
+        source: ./infra/inji/generated/config
+        target: /home/mosip/config
+        read_only: true
+        bind:
+          create_host_path: false
+      - certify-keys:/home/mosip/CERTIFY_PKCS12
+    depends_on:
+      database:
+        condition: service_healthy
+
+  minio-service:
+    image: mosipint/minio:2022.2.7-debian-10-r0
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+    volumes:
+      - object-data:/data
+
+  datashare-service:
+    image: mosipid/data-share-service:1.3.0-beta.2
+    environment:
+      active_profile_env: inji-default,standalone
+      SPRING_CONFIG_NAME: data-share
+      SPRING_CONFIG_LOCATION: /home/mosip/config/
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+    volumes:
+      - type: bind
+        source: ./infra/inji/generated/config
+        target: /home/mosip/config
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      - minio-service
+
+  config-server:
+    image: nginx:1.26.3
+    volumes:
+      - type: bind
+        source: ./infra/inji/config/static.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/inji/generated/public
+        target: /srv/inji
+        read_only: true
+        bind:
+          create_host_path: false
+
+  mimoto-service:
+    image: injistack/mimoto:0.21.0
+    user: root
+    environment:
+      container_user: mosip
+      active_profile_env: default
+      SPRING_CONFIG_NAME: mimoto
+      SPRING_CONFIG_LOCATION: /home/mosip/config/
+      SPRING_CLOUD_BOOTSTRAP_LOCATION: /home/mosip/config/mimoto-bootstrap.properties
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/inji_mimoto
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      oidc_p12_password: ${MIMOTO_KEYSTORE_PASSWORD:?Set MIMOTO_KEYSTORE_PASSWORD}
+      IDP_PARTNER_ENCRYPTION_KEY: ""
+      WALLET_BINDING_PARTNER_API_KEY: ""
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:?Set GOOGLE_OAUTH_CLIENT_ID}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:?Set GOOGLE_OAUTH_CLIENT_SECRET}
+    volumes:
+      - type: bind
+        source: ./infra/inji/generated/config
+        target: /home/mosip/config
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/inji/secrets/oidckeystore.p12
+        target: /home/mosip/certs/oidckeystore.p12
+        bind:
+          create_host_path: false
+    depends_on:
+      database:
+        condition: service_healthy
+      datashare-service:
+        condition: service_started
+      config-server:
+        condition: service_started
+
+  inji-web:
+    image: injistack/inji-web:0.16.0
+    environment:
+      DEFAULT_LANG: en
+      MIMOTO_URL: ${INJI_PUBLIC_ORIGIN:?Set INJI_PUBLIC_ORIGIN}/v1/mimoto
+    volumes:
+      - type: bind
+        source: ./infra/inji/config/web.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      - mimoto-service
+
+  verify-service:
+    image: injistack/inji-verify-service:0.17.0
+    environment:
+      active_profile_env: default
+      DATABASE_HOST: database
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: inji_verify
+      DATABASE_SCHEMA: verify
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      INJI_VP_REQUEST_LONG_POLLING_TIMEOUT: "5000"
+      INJI_VP_SUBMISSION_BASE_URL: ${INJI_PUBLIC_ORIGIN:?Set INJI_PUBLIC_ORIGIN}/v1/verify
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/home/mosip/config/verify.properties
+      INJI_KEYSTORE_FILE_PASS: ${VERIFY_KEYSTORE_PASSWORD:?Set VERIFY_KEYSTORE_PASSWORD}
+      INJI_VERIFY_REDIRECT_URI: ${INJI_PUBLIC_ORIGIN:?Set INJI_PUBLIC_ORIGIN}
+    volumes:
+      - type: bind
+        source: ./infra/inji/generated/config/verify.properties
+        target: /home/mosip/config/verify.properties
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/inji/secrets/verify-keystore.p12
+        target: /home/mosip/certs/verify-keystore.p12
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      database:
+        condition: service_healthy
+
+  gateway:
+    image: nginx:1.26.3
+    ports:
+      - "127.0.0.1:${INJI_GATEWAY_PORT:-8091}:80"
+    volumes:
+      - type: bind
+        source: ./infra/inji/config/gateway.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/inji/generated/public
+        target: /srv/inji
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      - certify
+      - inji-web
+      - mimoto-service
+      - verify-service
+      - datashare-service
+
+volumes:
+  postgres-data:
+  certify-keys:
+  object-data:
