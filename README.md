@@ -14,7 +14,11 @@ node infra/inji/scripts/local/sync-runtime.mjs
 docker compose -f infra/inji/generated/compose.runtime.json up -d --build --wait --wait-timeout 300
 ```
 
-For a fresh Linux setup, first run `node infra/inji/scripts/local/bootstrap.mjs`. It preserves an existing root `.env` by refusing to overwrite it. No public account or tunnel is required for the local Inji Web flow.
+The shared development `.env` and `infra/inji/secrets/` are committed for the private team, so a fresh clone needs only the three commands above with Node.js 22 and Docker. Do not run `bootstrap.mjs` on a clone; it refuses because `.env` exists. Log in to the wallet as `farmer` with `LOCAL_FARMER_PASSWORD` from `.env`. Accept the browser certificate warning instead of trusting `local-ca.crt` system-wide: its private key is shared.
+
+A machine that previously ran the stack with different secrets keeps them in Docker volumes. Remove that machine's `inji-playground` volumes once before starting with the shared secrets; this deletes its local wallet, credentials and database contents.
+
+Before the repository becomes public, remove `.env` and `infra/inji/secrets/` from history and run `node infra/inji/scripts/local/bootstrap.mjs` to create new private values. No public account or tunnel is required for the local Inji Web flow.
 
 To run client/server outside Docker, use Node.js 22.19+ in the Node 22 line, install dependencies with `npm ci` in each directory, and run `npm run dev` in both. The server reads the generated endpoints; nonempty `INJI_*` environment settings override them. Set `NODE_EXTRA_CA_CERTS` to the absolute path of `infra/inji/secrets/local-ca.crt` when calling the local HTTPS origin. Configure endpoints through files; Connections remains intentionally removed. The container workflow avoids host filesystem permission problems on mounted Windows volumes.
 
