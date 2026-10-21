@@ -61,7 +61,7 @@ The gateway sends token exchanges, credential issuance, presentation request ret
 
 Host ports bind only to loopback: 443, 5173, 8000, 8091 and 8443. The databases and object storage are internal. Certify keys use `certify-keys`; Mimoto's mutable keystore uses the runtime volume and must be backed up with `postgres-data`. Object storage uses `object-data`. Playground run history remains in memory; export reports before restarting its server.
 
-Stopping with `docker compose -f infra/inji/generated/compose.runtime.json stop` preserves data. Do not delete volumes to apply configuration changes. SQL initialization runs only on an empty PostgreSQL volume, and realm import skips existing realms. Existing database changes require explicit migrations; `migrations/001-verify-definition.sql` fixes the pinned Verify schema and farmer definition without resetting data.
+Stopping with `docker compose -f infra/inji/generated/compose.runtime.json stop` preserves data. Do not delete volumes to apply configuration changes. SQL initialization runs only on an empty PostgreSQL volume, and realm import skips existing realms. Existing database changes require explicit migrations; `migrations/001-verify-definition.sql` fixes the pinned Verify schema and farmer definition without resetting data; `003-unanchored-type-pattern.sql` adapts the type filter to Mimoto 0.21.0 substring matching.
 
 ## Scope and limitations
 

@@ -51,7 +51,8 @@ export class DatabaseRenderer {
               path: ["$.type[*]"],
               filter: {
                 type: "string",
-                pattern: "^FarmerCredential$",
+                // Mimoto 0.21.0 matches pattern as a substring, not a regex; anchors never match.
+                pattern: "FarmerCredential",
               },
             },
           ],
