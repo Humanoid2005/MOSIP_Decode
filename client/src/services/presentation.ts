@@ -20,7 +20,11 @@ export function formatName(format: string): string {
   return format === "ldp_vc" ? "W3C VC · JSON-LD" : "SD-JWT VC";
 }
 export function walletName(wallet: string): string {
-  return wallet === "INJI_WEB" ? "Inji Web" : "Inji Mobile";
+  return wallet === "INJI_WEB"
+    ? "Inji Web"
+    : wallet === "MOCK_WALLET"
+      ? "Playground mock wallet"
+      : "Inji Mobile";
 }
 export function timestamp(value: string): string {
   return new Intl.DateTimeFormat(undefined, {

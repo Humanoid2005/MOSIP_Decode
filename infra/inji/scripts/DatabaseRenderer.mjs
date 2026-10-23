@@ -36,7 +36,12 @@ export class DatabaseRenderer {
       template[1],
       Buffer.from(updated).toString("base64"),
     );
-    await writeFile(resolve(folder, "01-certify.sql"), certify);
+    const migrations = resolve(root, "infra/inji/migrations");
+    const migration = (name) => readFile(resolve(migrations, name), "utf8");
+    await writeFile(
+      resolve(folder, "01-certify.sql"),
+      certify + "\n" + (await migration("004-farmer-sd-jwt-certify.sql")),
+    );
     await writeFile(
       resolve(folder, "02-mimoto.sql"),
       await readFile(resolve(source, "mimoto_init.sql")),
@@ -73,7 +78,9 @@ export class DatabaseRenderer {
       ");\n";
     await writeFile(
       resolve(folder, "03-verify.sql"),
-      (await readFile(resolve(source, "verify_init.sql"), "utf8")).replace("input_descriptors jsonb", "input_descriptors text") + seed,
+      (await readFile(resolve(source, "verify_init.sql"), "utf8")).replace("input_descriptors jsonb", "input_descriptors text") +
+        seed +
+        (await migration("005-farmer-sd-jwt-verify.sql")),
     );
   }
 }

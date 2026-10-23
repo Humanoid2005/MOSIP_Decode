@@ -164,3 +164,11 @@ PASS requires a real valid Verify result, explicit holder confirmation, and a pr
 The configured credential is JSON-LD `FarmerCredential` using official synthetic data. Additional SD-JWT credentials require a compatible issuer/wallet/verifier configuration. Physical Inji Mobile needs reachable HTTPS and device trust; loopback is accessible only on this computer. Local Keycloak is a real development authorization service, not eSignet. Optional MOSIP resident binding/WebSub services are outside this standalone farmer environment; the upstream scheduler can log unavailable WebSub. No public tunnel or production infrastructure is provisioned.
 
 Preserve these distinctions in final reports and future handoffs. Read the live validation record before claiming that the complete journey passed.
+
+## 7. Session of 21 October 2026 (Claude Code, Linux workstation)
+
+- Fresh Linux bootstrap; the stack runs on 13 containers in about 2.5 GB of RAM.
+- First passing JSON-LD run (Certify → Inji Web → Verify) after migration 003 (Mimoto substring pattern matching).
+- SD-JWT added: `FarmerCredentialSdJwt` (migrations 004/005), optional Keycloak scope `mock_identity_vc_sd_jwt`, and per-format presentation definitions (`INJI_PRESENTATION_DEFINITION_IDS`).
+- Inji Web / Mimoto 0.21 cannot present SD-JWT (also true in 0.22.0). The user chose a playground mock wallet: `server/services/mock-wallet`, Keycloak public PKCE client `playground-mock-wallet`, and the `client_id` claim moved from credential scopes to each client. SD-JWT passes end to end with it.
+- All findings are in `context/LIVE_VALIDATION.md`. The user explicitly authorized committing `.env` and `infra/inji/secrets/` to the private repository (see 2.6).

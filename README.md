@@ -25,12 +25,20 @@ To run client/server outside Docker, use Node.js 22.19+ in the Node 22 line, ins
 ## Use the workbench
 
 1. Configure Certify's upstream base URL and its canonical issuer identifier. They can differ when a protocol bridge is used, but the canonical identifier must exactly match Certify metadata.
-2. Configure Inji Verify's **v1** base URL (usually ending in `/v1/verify`), its client ID, and an existing presentation definition ID. That definition must request the credential and format selected for the run.
+2. Configure Inji Verify's **v1** base URL (usually ending in `/v1/verify`), its client ID, and one existing presentation definition ID per credential format (`INJI_PRESENTATION_DEFINITION_IDS`, for example `ldp_vc=<id>,vc+sd-jwt=<id>`). Each definition must request the credential in that format.
 3. Discover issuer configurations on the Workbench. JSON-LD (`ldp_vc`) and SD-JWT (`vc+sd-jwt` / `dc+sd-jwt`) options appear only when advertised by Certify. The selected wallet and Verify release must also support the format.
 4. Start issuance. Either paste a genuine issuer-provided credential offer or initiate the credential download inside Inji Mobile / Inji Web. Complete authentication in the wallet. No generic Certify offer-creation endpoint is assumed.
 5. Confirm receipt after the credential appears in the wallet. This is recorded as **user confirmation**, not as a wallet callback or cryptographic evidence.
 6. Request verification. Scan the returned QR code with Inji Mobile, or open the protocol link on a supported wallet device. For the configured Inji Web release, use **Present with Inji Web** to open its `/authorize` flow.
 7. Inspect captured exchanges and export the run's JSON report from Run History. Verification status is polled while the run is open on the Workbench. Return there to resume polling after navigating away.
+
+### Formats and wallets
+
+The local stack advertises `FarmerCredential` (JSON-LD, Ed25519Signature2020) and `FarmerCredentialSdJwt` (`vc+sd-jwt`, ES256, selectively disclosable claims). Inji Web 0.16 / Mimoto 0.21 can store SD-JWT credentials but cannot present them over OpenID4VP; see [the validation record](context/LIVE_VALIDATION.md).
+
+Choose **Playground mock wallet** to run SD-JWT end to end. It is a minimal OpenID4VCI / OpenID4VP holder outside the Inji stack, registered in Keycloak as the public PKCE client `playground-mock-wallet`. **Sign in and issue** opens Keycloak; after sign-in the wallet proves possession of a fresh `did:jwk` key, stores the credential and advances the run. **Present with mock wallet** discloses every claim with a Key Binding JWT. Its traffic uses public endpoints and passes through the protocol bridge. It does not authenticate the verifier's request object signature and does not support JSON-LD.
+
+Existing environments need migrations `004` (Inji Certify database) and `005` (Inji Verify database), a Certify and Mimoto restart (Mimoto caches issuer metadata), and the realm changes in `RealmRenderer.mjs`. Teammates who reset their volumes for the shared secrets receive all of these automatically.
 
 Issuer-led offer creation and onboarding APIs vary by Certify release. The current adapter supports wallet-initiated downloads and externally supplied offers; it does not automatically create an offer through Certify's administrative APIs.
 

@@ -1,6 +1,6 @@
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { root } from "../Configuration.mjs";
+import { root, playgroundOrigin } from "../Configuration.mjs";
 
 export class RealmRenderer {
   constructor(configuration) { this.config = configuration; }
@@ -8,6 +8,13 @@ export class RealmRenderer {
     if (this.config.values.INJI_LOCAL_DEVELOPMENT !== "true") return;
     const { origin, values } = this.config;
     const certificate = await readFile(resolve(root, "infra/inji/secrets/wallet-certificate.txt"), "utf8");
+    const credentialScope = (name) => ({
+      name, protocol: "openid-connect",
+      attributes: { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      protocolMappers: [{ name: "credential-nonce", protocol: "openid-connect", protocolMapper: "inji-credential-nonce", config: {} }, { name: "credential-audience", protocol: "openid-connect", protocolMapper: "oidc-audience-mapper", config: { "included.custom.audience": values.AUTHORIZATION_CREDENTIAL_AUDIENCE, "access.token.claim": "true", "id.token.claim": "false" } }],
+    });
+    // Certify requires the proof JWT issuer to equal the token's client_id claim, so each wallet client asserts its own ID.
+    const clientIdMapper = (clientId) => [{ name: "credential-client", protocol: "openid-connect", protocolMapper: "oidc-hardcoded-claim-mapper", config: { "claim.name": "client_id", "claim.value": clientId, "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "false" } }];
     const realm = {
       realm: "inji", enabled: true, sslRequired: "external", registrationAllowed: false,
       clients: [
@@ -18,6 +25,17 @@ export class RealmRenderer {
           redirectUris: [origin + "/redirect", "io.mosip.residentapp.inji://oauthredirect"],
           attributes: { "jwt.credential.certificate": certificate, "use.jwks.url": "false" },
           defaultClientScopes: ["profile", "email", "basic", "mock_identity_vc_ldp"],
+          optionalClientScopes: ["mock_identity_vc_sd_jwt"],
+          protocolMappers: clientIdMapper("inji-wallet"),
+        },
+        {
+          clientId: "playground-mock-wallet", enabled: true, protocol: "openid-connect",
+          publicClient: true, standardFlowEnabled: true, directAccessGrantsEnabled: false,
+          redirectUris: [playgroundOrigin + "/api/v1/mock-wallet/callback"],
+          attributes: { "pkce.code.challenge.method": "S256" },
+          defaultClientScopes: ["profile", "email", "basic"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt"],
+          protocolMappers: clientIdMapper("playground-mock-wallet"),
         },
         {
           clientId: "inji-web-login", enabled: true, protocol: "openid-connect",
@@ -32,11 +50,9 @@ export class RealmRenderer {
         { name: "openid", protocol: "openid-connect", attributes: { "include.in.token.scope": "true" } },
         { name: "email", protocol: "openid-connect", protocolMappers: [{ name: "email", protocol: "openid-connect", protocolMapper: "oidc-usermodel-property-mapper", config: { "user.attribute": "email", "claim.name": "email", "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "true", "userinfo.token.claim": "true" } }] },
         { name: "profile", protocol: "openid-connect", protocolMappers: [{ name: "full name", protocol: "openid-connect", protocolMapper: "oidc-full-name-mapper", config: { "access.token.claim": "true", "id.token.claim": "true", "userinfo.token.claim": "true" } }] },
-        {
-        name: "mock_identity_vc_ldp", protocol: "openid-connect",
-        attributes: { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
-        protocolMappers: [{ name: "credential-nonce", protocol: "openid-connect", protocolMapper: "inji-credential-nonce", config: {} }, { name: "credential-client", protocol: "openid-connect", protocolMapper: "oidc-hardcoded-claim-mapper", config: { "claim.name": "client_id", "claim.value": "inji-wallet", "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "false" } }, { name: "credential-audience", protocol: "openid-connect", protocolMapper: "oidc-audience-mapper", config: { "included.custom.audience": values.AUTHORIZATION_CREDENTIAL_AUDIENCE, "access.token.claim": "true", "id.token.claim": "false" } }],
-      }],
+        credentialScope("mock_identity_vc_ldp"),
+        credentialScope("mock_identity_vc_sd_jwt"),
+      ],
       users: [{ id: "2154189532", username: "farmer", enabled: true, emailVerified: true, email: "farmer@example.test", firstName: "Gorge", lastName: "Cooper", credentials: [{ type: "password", value: values.LOCAL_FARMER_PASSWORD, temporary: false }] }],
     };
     await writeFile(resolve(output, "database/04-keycloak.sql"), "CREATE DATABASE keycloak;\n");

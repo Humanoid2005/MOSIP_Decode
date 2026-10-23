@@ -19,6 +19,9 @@ import { ProxyCaptureService } from "./services/proxy-service/ProxyCaptureServic
 import { ProtocolProxy } from "./services/proxy-service/ProtocolProxy.js";
 import { AppError } from "./services/errors.js";
 import { apiRoutes } from "./controllers/api.js";
+import { mockWalletRoutes } from "./controllers/mockWallet.js";
+import { InMemoryWalletSessionDao } from "./models/InMemoryWalletSessionDao.js";
+import { MockWalletService } from "./services/mock-wallet/MockWalletService.js";
 
 export function createApplication() {
   const dao = new InMemoryRunDao();
@@ -38,6 +41,15 @@ export function createApplication() {
     dao,
     new InjiVerifierAdapter(observedHttp),
     telemetry,
+  );
+  const wallet = new MockWalletService(
+    dao,
+    new InMemoryWalletSessionDao(),
+    http,
+    runs,
+    telemetry,
+    settings.mockWalletClientId,
+    `${settings.clientOrigin}/api/v1/mock-wallet/callback`,
   );
   const proxy = new ProtocolProxy(
     environment,
@@ -90,6 +102,7 @@ export function createApplication() {
       reports: new ReportService(dao),
     }),
   );
+  app.use("/api/v1", mockWalletRoutes(wallet));
   app.use((_req, _res, next) => next(new AppError(404, "Endpoint not found.")));
   const errors: ErrorRequestHandler = (error, _req, res, _next) => {
     const status =

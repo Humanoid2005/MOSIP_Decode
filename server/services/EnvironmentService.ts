@@ -20,7 +20,6 @@ export class EnvironmentService {
       "authorizationUrl",
       "publicBaseUrl",
       "verifierClientId",
-      "presentationDefinitionId",
       "stackVersion",
     ] as const) {
       const field = input[key];
@@ -47,6 +46,21 @@ export class EnvironmentService {
           );
         result[key] = result[key].replace(/\/+$/, "");
       }
+    }
+    result.presentationDefinitionIds = this.definitionIds(
+      input.presentationDefinitionIds,
+    );
+    return result;
+  }
+  private definitionIds(value: unknown): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const [format, id] of Object.entries(object(value))) {
+      if (typeof id !== "string" || !id.trim() || id.length > 2048)
+        throw new AppError(
+          422,
+          `Invalid presentation definition ID for ${format}.`,
+        );
+      result[format] = id.trim();
     }
     return result;
   }

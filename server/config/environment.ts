@@ -10,10 +10,20 @@ const dockerEnvironment =
   }).parsed ?? {};
 const endpoint = (name: string) =>
   process.env[name]?.trim() || dockerEnvironment[name] || "";
+function definitionIds(value: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const entry of value.split(",")) {
+    const [format, id] = entry.split("=").map((part) => part.trim());
+    if (format && id) result[format] = id;
+  }
+  return result;
+}
 export const settings = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 8000),
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  mockWalletClientId:
+    process.env.MOCK_WALLET_CLIENT_ID || "playground-mock-wallet",
 };
 export const initialEnvironment: Environment = {
   certifyUrl: endpoint("INJI_CERTIFY_URL"),
@@ -25,6 +35,8 @@ export const initialEnvironment: Environment = {
   publicBaseUrl:
     process.env.PUBLIC_BASE_URL || `http://localhost:${settings.port}`,
   verifierClientId: endpoint("INJI_VERIFIER_CLIENT_ID"),
-  presentationDefinitionId: endpoint("INJI_PRESENTATION_DEFINITION_ID"),
+  presentationDefinitionIds: definitionIds(
+    endpoint("INJI_PRESENTATION_DEFINITION_IDS"),
+  ),
   stackVersion: endpoint("INJI_STACK_VERSION"),
 };

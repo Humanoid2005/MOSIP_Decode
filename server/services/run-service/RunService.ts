@@ -5,6 +5,7 @@ import type { TelemetryService } from "../telemetry/TelemetryService.js";
 import type { OfferService } from "./OfferService.js";
 import { AppError, object, requiredString } from "../errors.js";
 import type { TestRun } from "../../models/dtos.js";
+import { mockWalletFormats } from "../mock-wallet/MockWalletService.js";
 export class RunService {
   private starting = false;
   constructor(
@@ -31,8 +32,8 @@ export class RunService {
     this.starting = true;
     try {
       const input = object(value);
-      if (!["INJI_MOBILE", "INJI_WEB"].includes(String(input.wallet)))
-        throw new AppError(422, "Select an Inji wallet.");
+      if (!["INJI_MOBILE", "INJI_WEB", "MOCK_WALLET"].includes(String(input.wallet)))
+        throw new AppError(422, "Select a supported wallet.");
       const environment = this.env.get();
       if (input.wallet === "INJI_WEB" && !environment.webWalletUrl)
         throw new AppError(409, "Configure the Inji Web URL first.");
@@ -44,6 +45,14 @@ export class RunService {
         throw new AppError(
           422,
           "Choose a credential configuration advertised by this issuer.",
+        );
+      if (
+        input.wallet === "MOCK_WALLET" &&
+        !mockWalletFormats.includes(configuration.format)
+      )
+        throw new AppError(
+          422,
+          "The mock wallet supports SD-JWT credentials only.",
         );
       const timestamp = new Date().toISOString();
       const run: TestRun = {
@@ -98,7 +107,13 @@ export class RunService {
       this.starting = false;
     }
   }
-  confirmHolder(id: string): TestRun {
+  confirmHolder(
+    id: string,
+    receipt = {
+      title: "Holder confirmed credential receipt",
+      evidence: "User confirmation; not a wallet callback.",
+    },
+  ): TestRun {
     const run = this.dao.get(id);
     if (run.phase !== "ISSUING")
       throw new AppError(
@@ -110,14 +125,14 @@ export class RunService {
     run.offerUri = undefined;
     this.dao.save(run);
     this.telemetry.record(id, {
-      source: "USER",
-      title: "Holder confirmed credential receipt",
+      source: run.wallet === "MOCK_WALLET" ? "WALLET" : "USER",
+      title: receipt.title,
       method: "",
       endpoint: "",
       status: 0,
       durationMs: 0,
       request: null,
-      response: { evidence: "User confirmation; not a wallet callback." },
+      response: { evidence: receipt.evidence },
     });
     return this.dao.get(id);
   }

@@ -9,6 +9,7 @@ import { formatName, runOutcome, webPresentationUrl } from "../../services/prese
 import { useWorkspace } from "../../store/workspace";
 import { ErrorNotice } from "../ui";
 import { WalletHandoff } from "./WalletHandoff";
+import { MockWalletPanel } from "./MockWalletPanel";
 export function RunStage({ run }: { run: TestRun }) {
   const action = useRunAction();
   const select = useWorkspace((state) => state.selectRun);
@@ -44,7 +45,11 @@ export function RunStage({ run }: { run: TestRun }) {
       <div className="space-y-4 p-6">
         <ErrorNotice error={run.error} />
         <ErrorNotice error={action.error} />
-        {run.phase === "ISSUING" && (
+        {run.wallet === "MOCK_WALLET" &&
+          ["ISSUING", "VERIFYING"].includes(run.phase) && (
+            <MockWalletPanel run={run} />
+          )}
+        {run.phase === "ISSUING" && run.wallet !== "MOCK_WALLET" && (
           <>
             <p className="text-sm leading-6 text-slate-500">
               Complete issuance in your wallet. Confirm receipt only after the
@@ -94,7 +99,9 @@ export function RunStage({ run }: { run: TestRun }) {
         )}
         {run.phase === "VERIFYING" && (
           <>
-            <WalletHandoff uri={run.presentationUri} webPresentationUrl={run.wallet === "INJI_WEB" ? webPresentationUrl(run.environment.webWalletUrl, run.presentationUri) : undefined} />
+            {run.wallet !== "MOCK_WALLET" && (
+              <WalletHandoff uri={run.presentationUri} webPresentationUrl={run.wallet === "INJI_WEB" ? webPresentationUrl(run.environment.webWalletUrl, run.presentationUri) : undefined} />
+            )}
             <ErrorNotice error={refresh.error} />
             {refresh.error ? (
               <button

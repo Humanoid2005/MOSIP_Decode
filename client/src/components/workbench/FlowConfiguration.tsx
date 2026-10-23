@@ -34,6 +34,8 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
   const options = discovery.data?.configurations || [];
   const choice =
     options.find((item) => item.id === configurationId) ?? options[0];
+  const mockUnsupported =
+    wallet === "MOCK_WALLET" && choice?.format === "ldp_vc";
   if (env.isPending) return <Loading />;
   if (env.error) return <ErrorNotice error={env.error} />;
   return (
@@ -64,7 +66,7 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (choice)
+            if (choice && !mockUnsupported)
               start.mutate({ wallet, configurationId: choice.id, offer });
           }}
         >
@@ -86,6 +88,9 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
                   <option value="INJI_MOBILE">Inji Mobile</option>
                   <option value="INJI_WEB" disabled={!env.data?.webWalletUrl}>
                     Inji Web{!env.data?.webWalletUrl ? " — URL required" : ""}
+                  </option>
+                  <option value="MOCK_WALLET">
+                    Playground mock wallet · non-Inji
                   </option>
                 </select>
               </label>
@@ -110,6 +115,12 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
                 </select>
               </label>
             </div>
+            {mockUnsupported && (
+              <p className="text-sm text-slate-600">
+                The mock wallet supports SD-JWT credentials only. Choose an
+                SD-JWT credential or another wallet.
+              </p>
+            )}
             {wallet === "INJI_MOBILE" && (
               <p className="text-sm text-slate-500">
                 Your phone must be able to reach the configured Inji services.
@@ -165,7 +176,7 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
             </span>
             <button
               className="btn-primary"
-              disabled={start.isPending || !choice || blocked}
+              disabled={start.isPending || !choice || blocked || mockUnsupported}
             >
               {start.isPending ? "Starting…" : "Start issuance"}
               <ArrowRight size={16} />

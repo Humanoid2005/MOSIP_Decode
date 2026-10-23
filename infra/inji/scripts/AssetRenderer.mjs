@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { root, properties, definitionId } from "./Configuration.mjs";
+import { root, properties, definitionIds, playgroundOrigin } from "./Configuration.mjs";
 
 const copyFile = async (source, destination) => writeFile(destination, await readFile(source));
 
@@ -179,7 +179,9 @@ export class AssetRenderer {
       INJI_WEB_URL: origin,
       INJI_AUTHORIZATION_URL: values.AUTHORIZATION_ISSUER_URL,
       INJI_VERIFIER_CLIENT_ID: verifierDid,
-      INJI_PRESENTATION_DEFINITION_ID: definitionId,
+      INJI_PRESENTATION_DEFINITION_IDS: Object.entries(definitionIds)
+        .map(([format, id]) => `${format}=${id}`)
+        .join(","),
       INJI_STACK_VERSION:
         "certify-0.14.0_mimoto-0.21.0_web-0.16.0_verify-0.17.0",
     };
@@ -195,7 +197,7 @@ export class AssetRenderer {
         INJI_CERTIFY_URL: "http://certify:8090/v1/certify/issuance",
         INJI_VERIFY_URL: "http://verify-service:8080/v1/verify",
         INJI_AUTHORIZATION_URL: "http://keycloak:8080/auth/realms/inji",
-        HOST: "0.0.0.0", PORT: "8000", CLIENT_ORIGIN: "http://localhost:5173",
+        HOST: "0.0.0.0", PORT: "8000", CLIENT_ORIGIN: playgroundOrigin,
         PUBLIC_BASE_URL: origin,
       }).map(([key, value]) => key + "=" + JSON.stringify(value)).join("\n") + "\n",
     );

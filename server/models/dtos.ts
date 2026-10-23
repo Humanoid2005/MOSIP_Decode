@@ -1,5 +1,5 @@
 export type JsonObject = Record<string, unknown>;
-export type Wallet = "INJI_MOBILE" | "INJI_WEB";
+export type Wallet = "INJI_MOBILE" | "INJI_WEB" | "MOCK_WALLET";
 export type Phase =
   "ISSUING" | "HELD" | "VERIFYING" | "COMPLETED" | "FAILED" | "CANCELLED";
 export type Verdict = "PENDING" | "VALID" | "INVALID" | "EXPIRED" | "ERROR";
@@ -12,7 +12,7 @@ export interface Environment {
   authorizationUrl: string;
   publicBaseUrl: string;
   verifierClientId: string;
-  presentationDefinitionId: string;
+  presentationDefinitionIds: Record<string, string>;
   stackVersion: string;
 }
 export interface CredentialConfiguration {
@@ -24,7 +24,7 @@ export interface CredentialConfiguration {
 export interface ProtocolEvent {
   id: string;
   timestamp: string;
-  source: "HTTP" | "PROXY" | "USER";
+  source: "HTTP" | "PROXY" | "USER" | "WALLET";
   title: string;
   method: string;
   endpoint: string;

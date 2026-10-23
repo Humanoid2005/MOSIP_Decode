@@ -8,18 +8,21 @@ export class InjiVerifierAdapter implements VerifierAdapter {
   constructor(private readonly http: ObservedHttpClient) {}
   async create(run: TestRun) {
     const env = run.environment;
-    if (
-      !env.verifyUrl ||
-      !env.verifierClientId ||
-      !env.presentationDefinitionId
-    )
+    if (!env.verifyUrl || !env.verifierClientId)
       throw new AppError(
         409,
-        "Configure Verify URL, verifier client ID and presentation definition ID first.",
+        "Configure Verify URL and verifier client ID first.",
+      );
+    const definitionId =
+      env.presentationDefinitionIds[run.configuration.format];
+    if (!definitionId)
+      throw new AppError(
+        409,
+        `No presentation definition is configured for ${run.configuration.format}.`,
       );
     const definition = object(
       await this.http.json(
-        `${env.verifyUrl}/vp-definition/${encodeURIComponent(env.presentationDefinitionId)}`,
+        `${env.verifyUrl}/vp-definition/${encodeURIComponent(definitionId)}`,
         "Presentation definition",
         run.id,
       ),

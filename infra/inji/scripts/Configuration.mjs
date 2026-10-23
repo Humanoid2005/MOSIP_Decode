@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 export const root = fileURLToPath(new URL("../../../", import.meta.url));
+export const playgroundOrigin = "http://localhost:5173";
 export const definitionId = "00000000-0000-4000-8000-000000000001";
+// Presentation definition per credential format; the SD-JWT definition is created by migration 005.
+export const definitionIds = {
+  ldp_vc: definitionId,
+  "vc+sd-jwt": "00000000-0000-4000-8000-000000000002",
+};
 
 export class Configuration {
   constructor(values) {

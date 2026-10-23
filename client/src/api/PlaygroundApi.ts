@@ -64,6 +64,16 @@ export class PlaygroundApi {
     action: "holder" | "cancel" | "presentation" | "refresh",
   ) =>
     this.request<TestRun>(`/runs/${encodeURIComponent(id)}/${action}`, "POST");
+  mockAuthorize = (id: string) =>
+    this.request<{ url: string }>(
+      `/runs/${encodeURIComponent(id)}/mock-wallet/authorize`,
+      "POST",
+    );
+  mockPresent = (id: string) =>
+    this.request<TestRun>(
+      `/runs/${encodeURIComponent(id)}/mock-wallet/present`,
+      "POST",
+    );
   reportUrl = (id: string) => `/api/v1/runs/${encodeURIComponent(id)}/report`;
 }
 export const api = new PlaygroundApi();
