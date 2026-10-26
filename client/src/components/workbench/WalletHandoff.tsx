@@ -1,3 +1,4 @@
+import { qrHandoff } from "../../../../server/models/scenarios";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Copy, ExternalLink, ScanLine } from "lucide-react";
@@ -11,7 +12,7 @@ export function WalletHandoff({
   webPresentationUrl?: string;
 }) {
   const [message, setMessage] = useState("");
-  const fitsQr = uri && new TextEncoder().encode(uri).length < 2000;
+  const fitsQr = uri && qrHandoff(uri).fitsQr;
   return (
     <div className="my-6 flex flex-col items-center gap-4 rounded-xl bg-slate-50 p-6 text-center">
       {fitsQr ? (
@@ -35,7 +36,12 @@ export function WalletHandoff({
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {webPresentationUrl && (
-              <a href={webPresentationUrl} target="_blank" rel="noreferrer" className="btn-primary">
+              <a
+                href={webPresentationUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary"
+              >
                 Present with Inji Web
                 <ExternalLink size={15} />
               </a>

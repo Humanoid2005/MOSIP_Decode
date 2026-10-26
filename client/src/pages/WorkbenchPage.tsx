@@ -5,6 +5,7 @@ import { Topology } from "../components/workbench/Topology";
 import { FlowConfiguration } from "../components/workbench/FlowConfiguration";
 import { RunStage } from "../components/workbench/RunStage";
 import { ProtocolSummary } from "../components/workbench/ProtocolSummary";
+import { AccountStep } from "../components/mimoto-wallet/AccountStep";
 export function WorkbenchPage() {
   const current = useCurrentRun();
   const runs = useRuns();
@@ -35,6 +36,7 @@ export function WorkbenchPage() {
           Resume active run
         </button>
       )}
+      <AccountStep />
       <Topology run={current.data} />
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

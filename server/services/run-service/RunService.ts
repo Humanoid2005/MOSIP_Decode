@@ -1,3 +1,9 @@
+import {
+  expiredConfigurationId,
+  unsupportedDidConfigurationId,
+  scenarios,
+  scenarioUnavailable,
+} from "../../models/scenarios.js";
 import { randomUUID } from "node:crypto";
 import type { IssuerAdapter, RunDao } from "../../models/contracts.js";
 import type { EnvironmentService } from "../EnvironmentService.js";
@@ -32,19 +38,70 @@ export class RunService {
     this.starting = true;
     try {
       const input = object(value);
-      if (!["INJI_MOBILE", "INJI_WEB", "MOCK_WALLET"].includes(String(input.wallet)))
+      if (
+        !["INJI_MOBILE", "INJI_WEB", "INJI_MIMOTO", "MOCK_WALLET"].includes(
+          String(input.wallet),
+        )
+      )
         throw new AppError(422, "Select a supported wallet.");
       const environment = this.env.get();
       if (input.wallet === "INJI_WEB" && !environment.webWalletUrl)
         throw new AppError(409, "Configure the Inji Web URL first.");
       const discovery = await this.issuer.discover(environment);
+      const scenario = scenarios.find(
+        (item) => item.id === (input.scenario ?? "NONE"),
+      );
+      if (!scenario) throw new AppError(422, "Unknown test scenario.");
+      const parent =
+        typeof input.parentRunId === "string"
+          ? this.dao.get(input.parentRunId)
+          : undefined;
+      if (
+        parent &&
+        !["COMPLETED", "FAILED", "CANCELLED"].includes(parent.phase)
+      )
+        throw new AppError(409, "Finish the original run before replaying it.");
       const configuration = discovery.configurations.find(
-        (config) => config.id === input.configurationId,
+        (config) =>
+          config.id ===
+          (scenario.id === "EXPIRED_CREDENTIAL"
+            ? expiredConfigurationId
+            : scenario.id === "UNSUPPORTED_DID"
+              ? unsupportedDidConfigurationId
+              : input.configurationId),
       );
       if (!configuration)
         throw new AppError(
           422,
           "Choose a credential configuration advertised by this issuer.",
+        );
+      const unavailable = scenarioUnavailable(
+        scenario.id,
+        input.wallet as TestRun["wallet"],
+        configuration.format,
+        discovery.configurations.some(
+          (item) => item.id === expiredConfigurationId,
+        ),
+        discovery.configurations.some(
+          (item) => item.id === unsupportedDidConfigurationId,
+        ),
+      );
+      if (unavailable) throw new AppError(422, unavailable);
+      if (
+        configuration.id === unsupportedDidConfigurationId &&
+        scenario.id !== "UNSUPPORTED_DID"
+      )
+        throw new AppError(
+          422,
+          "Select the unsupported DID scenario to use this fixture.",
+        );
+      if (
+        configuration.id === expiredConfigurationId &&
+        scenario.id !== "EXPIRED_CREDENTIAL"
+      )
+        throw new AppError(
+          422,
+          "Select the expiry scenario to use the expired fixture.",
         );
       if (
         input.wallet === "MOCK_WALLET" &&
@@ -54,9 +111,31 @@ export class RunService {
           422,
           "The mock wallet supports SD-JWT credentials only.",
         );
+      if (
+        input.wallet === "INJI_MIMOTO" &&
+        (!environment.embeddedWalletUrl || !environment.mimotoUrl)
+      )
+        throw new AppError(409, "The embedded Inji wallet is not configured.");
+      if (input.wallet === "INJI_MIMOTO" && configuration.format !== "ldp_vc")
+        throw new AppError(
+          422,
+          "This Mimoto release supports JSON-LD presentations only. Use the mock wallet for SD-JWT.",
+        );
+      if (
+        ["INJI_MIMOTO", "MOCK_WALLET"].includes(String(input.wallet)) &&
+        typeof input.offer === "string" &&
+        input.offer.trim()
+      )
+        throw new AppError(
+          422,
+          "This wallet uses authorization-code issuance and does not redeem credential offers.",
+        );
       const timestamp = new Date().toISOString();
       const run: TestRun = {
         id: randomUUID(),
+        scenario: scenario.id,
+        scenarioEvidence: { applied: false },
+        ...(parent ? { parentRunId: parent.id } : {}),
         createdAt: timestamp,
         updatedAt: timestamp,
         wallet: input.wallet as TestRun["wallet"],
@@ -113,6 +192,7 @@ export class RunService {
       title: "Holder confirmed credential receipt",
       evidence: "User confirmation; not a wallet callback.",
     },
+    source: "USER" | "MIMOTO" | "MOCK_WALLET" = "USER",
   ): TestRun {
     const run = this.dao.get(id);
     if (run.phase !== "ISSUING")
@@ -120,12 +200,21 @@ export class RunService {
         409,
         "Holder confirmation is only available during issuance.",
       );
+    if (
+      (run.wallet === "INJI_MIMOTO" && source !== "MIMOTO") ||
+      (run.wallet === "MOCK_WALLET" && source !== "MOCK_WALLET")
+    )
+      throw new AppError(
+        409,
+        "Receipt must be confirmed by the selected wallet storage response.",
+      );
     run.phase = "HELD";
     run.holderConfirmed = true;
+    run.holderReceiptSource = source;
     run.offerUri = undefined;
     this.dao.save(run);
     this.telemetry.record(id, {
-      source: run.wallet === "MOCK_WALLET" ? "WALLET" : "USER",
+      source: source === "USER" ? "USER" : "WALLET",
       title: receipt.title,
       method: "",
       endpoint: "",

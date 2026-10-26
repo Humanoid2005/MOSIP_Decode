@@ -106,7 +106,7 @@ export function PayloadView({ event }: { event: ProtocolEvent }) {
         <p>
           {decoded
             ? "Decoding is for inspection; the verification verdict comes from Inji Verify."
-            : "Authentication tokens are redacted. Raw bodies are not rewritten on the wire."}
+            : "Authentication tokens are redacted. Captured payloads reflect what was sent; controlled scenario changes are listed in the evidence."}
         </p>
         <p role="status">{message}</p>
       </div>

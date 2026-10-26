@@ -1,9 +1,11 @@
 # Work Done by Codex Till Now
 
-Last updated: 17 October 2026, Asia/Kolkata.
-Workspace: `/media/sriram-srikanth/New Volume/Mosip Challenge` (previously `D:\Mosip Challenge`).
+Last updated: 26 October 2026, Asia/Kolkata.
+Workspace: `/home/sriram-srikanth/Documents/MOSIP-Decode`.
 
 ## 1. Current task and state
+
+The latest runtime instructions are in section 9: the user authorized a full Docker reset and direct Compose startup using this checkout’s `.env` and keys. Earlier runtime-volume recovery notes describe the superseded setup.
 
 The user explicitly asked to start Docker, make the Inji stack work, replace nonfunctional integrations and connect the real client/server/wallet/verifier. They chose a **local development setup** without external identity-provider registrations or a public tunnel. This supersedes the earlier instruction to prepare Compose without running it.
 
@@ -172,3 +174,48 @@ Preserve these distinctions in final reports and future handoffs. Read the live 
 - SD-JWT added: `FarmerCredentialSdJwt` (migrations 004/005), optional Keycloak scope `mock_identity_vc_sd_jwt`, and per-format presentation definitions (`INJI_PRESENTATION_DEFINITION_IDS`).
 - Inji Web / Mimoto 0.21 cannot present SD-JWT (also true in 0.22.0). The user chose a playground mock wallet: `server/services/mock-wallet`, Keycloak public PKCE client `playground-mock-wallet`, and the `client_id` claim moved from credential scopes to each client. SD-JWT passes end to end with it.
 - All findings are in `context/LIVE_VALIDATION.md`. The user explicitly authorized committing `.env` and `infra/inji/secrets/` to the private repository (see 2.6).
+
+## 8. Session of 26 October 2026 — review and embedded Mimoto wallet
+
+- The user explicitly chose to integrate the real Inji wallet through Mimoto into the workbench. See [implementation review](context/IMPLEMENTATION_REVIEW.md) for the audit and remaining gaps.
+- Added `INJI_MIMOTO`, served at the existing HTTPS origin under `/playground/`: wallet login return, creation/unlock, PKCE issuance, authenticated storage receipt, verifier/credential review and explicit presentation approval. Standalone Inji Web remains an external option. Identity-provider sign-in still redirects normally.
+- New backend services are in `server/services/mimoto-wallet`; session models/DAO remain in `server/models`; focused React controls are in `client/src/components/mimoto-wallet`. Mimoto retains wallet keys and persistent storage. Its session cookies and CSRF protections remain enabled.
+- Added the workbench callback to realm rendering and the additive `local/update-wallet-client.mjs` migration for existing realms. Login success routes through `/playground/login-return`, returning standalone users to `/user/passcode`.
+- Fixed Verify result handling to require the overall presentation result and matching transaction. Reports distinguish user, Mimoto and mock-wallet receipt evidence; manual confirmation cannot advance integrated-wallet runs. Unsupported format/offer guidance is explicit.
+- This Docker Desktop context contained the older 17 October volumes, not the separate 21 October Linux environment. Matching `.env` and keys were recovered from `/media/sriram-srikanth/New Volume/Mosip Challenge`. No existing secrets, wallets or volumes were deleted. `INJI_CONFIG_HOME` and sync identity checks now prevent silently mixing these identities. Use that configuration home for this workstation's future prepare/sync calls; current checkout `.env` and secrets were preserved.
+- Applied existing migration 003 to the older Verify database after reproducing its anchored-pattern mismatch. The recovered runtime advertises JSON-LD only; do not claim SD-JWT was revalidated here.
+- Real API journey `4d19e663-7704-44d8-98f2-046d76153aff` reached PASS through Certify → Mimoto storage/presentation → Verify. Both TypeScript builds and client lint pass. Browser tools were unavailable, so visual/navigation QA remains outstanding. No automated test cases were added.
+
+## 9. Explicit Docker reset and direct Compose setup — 26 October 2026
+
+- The user explicitly requested deleting all previous project containers, volumes and images and starting from scratch with Compose. This supersedes the preservation requirement for that one reset only. Repository `.env` and keys were retained.
+- The project containers/network were already absent. Removed the four old named Inji volumes, four identified orphan Inji anonymous volumes, project-built images, Inji service image tags and the base image tags used by this setup. Unrelated calculator resources, RASP/RabbitMQ volumes and Ubuntu were preserved. No global Docker prune was used.
+- Direct bind mounts from the current workspace work. Use `node infra/inji/scripts/prepare.mjs`, then `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait --wait-timeout 600`. The old generated runtime Compose file was removed. Do not set `INJI_CONFIG_HOME` to the previous workspace for this new setup.
+- Added a one-shot `wallet-keys-init` service and persistent `wallet-keys` volume so Mimoto never mutates the tracked seed keystore. Initialization preserves an existing volume. PostgreSQL health now checks TCP readiness to avoid starting dependents during the temporary seed server.
+- Application images were rebuilt with `build --no-cache --pull`; normal restarts do not require an uncached build. Frontend and backend run inside Compose.
+
+- Fresh startup verified: 12 services running, all configured health checks healthy, and the wallet initializer exited successfully. HTTPS workbench, backend health/issuer metadata, Mimoto/Verify health and Keycloak discovery return HTTP 200 with the current checkout CA. Issuer metadata advertises `FarmerCredential` (`ldp_vc`) and `FarmerCredentialSdJwt` (`vc+sd-jwt`). This is startup validation; the earlier full journey evidence belongs to the erased runtime.
+
+## 10. Optional account signup and synthetic issuer records — 26 October 2026
+
+- User authorized optional Step 0 registration/sign-in and per-account synthetic issuer provisioning. Added `AccountStep` before the existing three workbench steps. It uses Mimoto’s authenticated wallet session, skips account setup when signed in, permits deferral, and returns from Keycloak registration/login to the workbench. Passwords remain on Keycloak’s form; wallet PIN setup remains separate.
+- Enabled Keycloak self-registration in fresh realm rendering and the additive `local/enable-registration.mjs` upgrade helper. Existing accounts/wallets were preserved; no Docker data reset was performed for this change.
+- Added a separate Certify `DataProviderPlugin` in `infra/inji/certify`, selected only in local development. It creates a labelled fictional farmer record on first authorized issuance using Certify’s validated token subject, persists it in PostgreSQL and reuses it on subsequent issuance. It never uses a browser-supplied subject or treats registration profile information as verified farming facts. The original CSV provider remains in the base/non-local setup.
+- Migration 006 creates the registry; the local image compiles against the pinned Certify libraries and leaves upstream signing/token/proof checks intact. The generic credential selector and the two existing Farmer formats remain. This adds registration, not new credential domains or multi-user run isolation.
+- Frontend lint/TypeScript/Vite and the Java provider build pass. Manual registration through the real Keycloak form, Mimoto wallet creation, Certify issuance/storage and Mimoto presentation reached Verify PASS for run `be7866e6-a8cd-42ba-aaa9-73e586db7736`. Repeat issuance reused one stored issuer record. Browser inventory remains empty, so visual browser QA is unverified. No automated test cases were added.
+
+A second independently self-registered account also completed issuance and Mimoto storage. Docker Desktop then became unavailable (its socket disappeared and local HTTPS refused connections), preventing final disposable-data cleanup. Temporary accounts still requiring cleanup: `signup-demo-6460ba7874`, `signup-demo-b67925d73a`. Their wallets and synthetic issuer rows should be removed only by these exact identities after Docker returns; user-created accounts must be preserved. Do not infer the stack is currently running from the earlier PASS.
+
+## Negative paths and replay — 26 October 2026
+
+The user approved implementation of the proposed negative-path workbench. Added the shared scenario catalog/outcome model, scenario execution service, controlled mock-wallet and correlated JSON-LD bridge mutations, signed expiry/DID fixtures, scenario controls, inspector diffs, linked fresh-issuance replay, history filters, and v2 reports. Credential verdict and scenario outcome are independent. Wallet matching/storage, issuer rejection, request errors and verifier results retain their actual stages.
+
+The local fixture helper is `infra/inji/scripts/local/enable-negative-scenarios.mjs`; migrations 007/008 and RealmRenderer cover fresh installations. Normal JSON-LD scope is optional and explicitly requested; it previously masked another requested credential scope in Certify. No reset or key change was performed. Existing user changes were preserved.
+
+Normal flows and signature/claim/expiry scenarios passed live validation. Mimoto rejected type/format/proof mismatches; the diagnostic mock bypassed matching and Verify accepted those mismatches and a wrong nonce. These remain visible failed scenarios. Signed DID issuance succeeded but Mimoto storage returned a generic HTTP 500, correctly marked inconclusive. QR is a local policy probe. Replay starts a new issuance/request with a parent link, rather than replaying an old token. Detailed outcomes and caveats are in `context/LIVE_VALIDATION.md` and its negative-scenario evidence file.
+
+Server/client builds and client lint passed in Docker (host node_modules had broken compiler links). Browser inventory is empty; no visual browser QA is claimed. No automated tests, CI, external messages, production deployment or commits were added. The local playground containers were rebuilt and are running.
+
+## Follow-up bug review — 26 October 2026
+
+Fixed the actual JSON-LD happy-path descriptor mismatch in the pinned Mimoto implementation, strengthened negative-scenario attribution and independent checks, corrected NOT_APPLICABLE credential-status reporting, surfaced detailed errors in the workbench/inspector, retained non-JSON failure evidence, prevented stale UI status overwrites, and added backend result collection with retry/error persistence and submission-capture ordering. No new test cases or public deployment were added. Current implementation and manual evidence are in the final section of [LIVE_VALIDATION.md](context/LIVE_VALIDATION.md). Normal and bad-signature replay both passed their respective expectations on the final images without client polling. The wrong-nonce upstream acceptance gap remains a visible failed scenario. This work changed the active `Documents/MOSIP-Decode` checkout, not the older mounted-volume copy. Existing uncommitted changes and persistent stack data were preserved.

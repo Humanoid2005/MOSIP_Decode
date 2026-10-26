@@ -1,10 +1,12 @@
+import type { ScenarioService } from "../scenario-service/ScenarioService.js";
+import { credentialFingerprint } from "../run-service/credentialFingerprint.js";
 import { randomUUID } from "node:crypto";
 import type { HttpTransport, RunDao } from "../../models/contracts.js";
 import type { TestRun } from "../../models/dtos.js";
 import type { WalletSessionDao } from "../../models/WalletSession.js";
 import type { RunService } from "../run-service/RunService.js";
 import type { TelemetryService } from "../telemetry/TelemetryService.js";
-import { AppError, object, requiredString } from "../errors.js";
+import { AppError, UpstreamError, object, requiredString } from "../errors.js";
 import {
   base64url,
   createHolderKey,
@@ -14,6 +16,7 @@ import {
   signEs256,
 } from "./jws.js";
 import { presentSdJwt } from "./sdJwtPresentation.js";
+import { verifyRequest, verifierPublicBase } from "./verifyRequest.js";
 // Values received from Inji services; SD-JWTs and request objects exceed request-field limits.
 function upstream(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim())
@@ -33,6 +36,7 @@ export class MockWalletService {
     private readonly telemetry: TelemetryService,
     private readonly clientId: string,
     private readonly redirectUri: string,
+    private readonly scenarios: ScenarioService,
   ) {}
   async authorize(runId: string): Promise<{ url: string }> {
     const run = this.walletRun(runId, "ISSUING");
@@ -61,9 +65,13 @@ export class MockWalletService {
       codeVerifier: randomToken(),
       scope: upstream(configuration.scope, "scope"),
       credentialIssuer: upstream(issuer.credential_issuer, "credential_issuer"),
-      credentialEndpoint: upstream(issuer.credential_endpoint, "credential_endpoint"),
+      credentialEndpoint: upstream(
+        issuer.credential_endpoint,
+        "credential_endpoint",
+      ),
       tokenEndpoint: upstream(server.token_endpoint, "token_endpoint"),
-      vct: typeof configuration.vct === "string" ? configuration.vct : undefined,
+      vct:
+        typeof configuration.vct === "string" ? configuration.vct : undefined,
     };
     this.sessions.save(session);
     const parameters = {
@@ -104,9 +112,17 @@ export class MockWalletService {
       iat: Math.floor(Date.now() / 1000),
       nonce: upstream(token.c_nonce, "c_nonce"),
     };
-    const proofHeader = { typ: "openid4vci-proof+jwt", jwk: session.holder.publicJwk };
+    const proofHeader = {
+      typ: "openid4vci-proof+jwt",
+      jwk: session.holder.publicJwk,
+    };
     const proof = signEs256(proofHeader, proofClaims, session.holder);
-    this.record(run.id, "Mock wallet proof of possession", decodeJwt(proof), null);
+    this.record(
+      run.id,
+      "Mock wallet proof of possession",
+      decodeJwt(proof),
+      null,
+    );
     const response = object(
       await this.send(session.credentialEndpoint, "Credential request", {
         json: {
@@ -119,29 +135,75 @@ export class MockWalletService {
     );
     session.credential = upstream(response.credential, "credential");
     this.sessions.save(session);
-    return this.runs.confirmHolder(run.id, {
-      title: "Mock wallet stored the credential",
-      evidence: "Credential response received and stored by the playground mock wallet.",
-    });
+    const observed = this.dao.get(run.id);
+    observed.credentialObserved = true;
+    observed.credentialFingerprints.push(
+      credentialFingerprint(session.credential),
+    );
+    this.dao.save(observed);
+    return this.runs.confirmHolder(
+      run.id,
+      {
+        title: "Mock wallet stored the credential",
+        evidence:
+          "Credential response received and stored by the playground mock wallet.",
+      },
+      "MOCK_WALLET",
+    );
   }
   async present(runId: string): Promise<TestRun> {
     const run = this.walletRun(runId, "VERIFYING");
     const session = this.sessions.get(runId);
     if (!session?.credential)
-      throw new AppError(409, "The mock wallet holds no credential for this run.");
-    const link = new URL(requiredString(run.presentationUri, "presentationUri"));
+      throw new AppError(
+        409,
+        "The mock wallet holds no credential for this run.",
+      );
+    const link = new URL(
+      requiredString(run.presentationUri, "presentationUri"),
+    );
     const requestUri = upstream(
       link.searchParams.get("request_uri"),
       "request_uri",
     );
-    const request = decodeJwt(
-      upstream(
-        await this.send(requestUri, "Presentation request object", {
-          accept: "application/oauth-authz-req+jwt, application/jwt",
-        }),
-        "request",
-      ),
-    ).payload;
+    if (
+      requestUri !==
+      `${verifierPublicBase(run)}/vp-request/${encodeURIComponent(run.requestId!)}`
+    )
+      throw new AppError(
+        502,
+        "Unexpected verifier request URI. No credential was shared.",
+      );
+    const requestToken = upstream(
+      await this.send(requestUri, "Presentation request object", {
+        accept: "application/oauth-authz-req+jwt, application/jwt",
+      }),
+      "request",
+    );
+    const document = await this.json(
+      `${run.environment.verifyUrl}/did.json`,
+      "Configured verifier DID document",
+    );
+    let request: Record<string, unknown>;
+    try {
+      request = verifyRequest(requestToken, document, run);
+    } catch (error) {
+      this.scenarios.fail(
+        runId,
+        "REQUEST",
+        "REQUEST_AUTHENTICATION_FAILED",
+        error instanceof Error
+          ? error.message
+          : "Verifier request authentication failed.",
+      );
+      return this.dao.get(runId);
+    }
+    this.record(
+      runId,
+      "Verifier request signature and run binding verified",
+      { clientId: request.client_id, state: request.state },
+      { valid: true },
+    );
     if (request.client_id !== link.searchParams.get("client_id"))
       throw new AppError(
         502,
@@ -154,11 +216,25 @@ export class MockWalletService {
         : undefined,
     );
     const vpToken = presentSdJwt(
-      session.credential,
+      (await this.scenarios.credential(run, session.credential)) as string,
       session.holder,
       upstream(request.client_id, "client_id"),
-      upstream(request.nonce, "nonce"),
+      run.scenario === "WRONG_NONCE"
+        ? "playground-deliberately-wrong-nonce"
+        : upstream(request.nonce, "nonce"),
     );
+    if (run.scenario === "WRONG_NONCE")
+      this.scenarios.record(runId, {
+        applied: true,
+        stage: "SUBMISSION",
+        changes: [
+          {
+            path: "keyBinding.nonce",
+            before: request.nonce,
+            after: "playground-deliberately-wrong-nonce",
+          },
+        ],
+      });
     const submission = {
       id: randomUUID(),
       definition_id: upstream(definition.id, "presentation_definition.id"),
@@ -180,17 +256,35 @@ export class MockWalletService {
       },
       null,
     );
-    await this.send(
-      upstream(request.response_uri, "response_uri"),
-      "Presentation submission",
-      {
-        form: {
-          vp_token: vpToken,
-          presentation_submission: JSON.stringify(submission),
-          state: upstream(request.state, "state"),
+    try {
+      await this.send(
+        upstream(request.response_uri, "response_uri"),
+        "Presentation submission",
+        {
+          form: {
+            vp_token: vpToken,
+            presentation_submission: JSON.stringify(submission),
+            state: upstream(request.state, "state"),
+          },
         },
-      },
-    );
+      );
+    } catch (error) {
+      if (
+        error instanceof UpstreamError &&
+        error.upstreamStatus >= 400 &&
+        error.upstreamStatus < 500 &&
+        error.upstreamStatus !== 429
+      ) {
+        this.scenarios.fail(
+          runId,
+          "SUBMISSION",
+          "SUBMISSION_REJECTED",
+          error.message,
+        );
+        return this.dao.get(runId);
+      }
+      throw error;
+    }
     return this.dao.get(runId);
   }
   private walletRun(runId: string, phase: TestRun["phase"]): TestRun {
@@ -198,7 +292,10 @@ export class MockWalletService {
     if (run.wallet !== "MOCK_WALLET")
       throw new AppError(409, "This run does not use the mock wallet.");
     if (run.phase !== phase)
-      throw new AppError(409, `The mock wallet action requires phase ${phase}.`);
+      throw new AppError(
+        409,
+        `The mock wallet action requires phase ${phase}.`,
+      );
     return run;
   }
   private json(url: string, title: string): Promise<unknown> {
@@ -233,13 +330,18 @@ export class MockWalletService {
       body,
     });
     if (response.status < 200 || response.status >= 300)
-      throw new AppError(
-        502,
+      throw new UpstreamError(
+        response.status,
         `Mock wallet ${title.toLowerCase()} failed with HTTP ${response.status}. See the protocol inspector.`,
       );
     return response.body;
   }
-  private record(runId: string, title: string, request: unknown, response: unknown) {
+  private record(
+    runId: string,
+    title: string,
+    request: unknown,
+    response: unknown,
+  ) {
     this.telemetry.record(runId, {
       source: "WALLET",
       title,

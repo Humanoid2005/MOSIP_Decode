@@ -1,3 +1,4 @@
+import type { ScenarioId } from "../../../server/models/scenarios";
 import type {
   Environment,
   TestRun,
@@ -44,7 +45,12 @@ export class PlaygroundApi {
     if (!response.ok)
       throw new ApiError(
         response.status,
-        (payload as { error?: string }).error || "Request failed.",
+        payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+          ? payload.error
+          : `Request failed (HTTP ${response.status}).`,
       );
     return payload as T;
   }
@@ -57,8 +63,13 @@ export class PlaygroundApi {
   runs = () => this.request<RunSummary[]>("/runs");
   run = (id: string) =>
     this.request<TestRun>(`/runs/${encodeURIComponent(id)}`);
-  start = (body: { wallet: Wallet; configurationId: string; offer: string }) =>
-    this.request<TestRun>("/runs", "POST", body);
+  start = (body: {
+    wallet: Wallet;
+    configurationId: string;
+    offer: string;
+    scenario?: ScenarioId;
+    parentRunId?: string;
+  }) => this.request<TestRun>("/runs", "POST", body);
   action = (
     id: string,
     action: "holder" | "cancel" | "presentation" | "refresh",

@@ -13,7 +13,12 @@ export interface HttpTransport {
   send(
     url: string,
     options?: RequestInit,
-  ): Promise<{ status: number; body: unknown; durationMs: number }>;
+  ): Promise<{
+    status: number;
+    body: unknown;
+    durationMs: number;
+    headers?: Headers;
+  }>;
 }
 export interface IssuerAdapter {
   discover(
@@ -29,11 +34,10 @@ export interface VerifierAdapter {
     run: TestRun,
   ): Promise<{ requestId: string; transactionId: string; uri: string }>;
   status(run: TestRun): Promise<string>;
-  result(
-    run: TestRun,
-  ): Promise<{
+  result(run: TestRun): Promise<{
     verdict: "VALID" | "INVALID" | "EXPIRED";
     payload: unknown;
     credentials: unknown[];
+    verification: import("./verification.js").VerificationEvidence;
   }>;
 }

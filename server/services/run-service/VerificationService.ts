@@ -1,6 +1,8 @@
+import { scenarioOutcome } from "../../models/scenarios.js";
+import type { ScenarioService } from "../scenario-service/ScenarioService.js";
 import type { RunDao, VerifierAdapter } from "../../models/contracts.js";
 import type { TelemetryService } from "../telemetry/TelemetryService.js";
-import { AppError } from "../errors.js";
+import { AppError, UpstreamError } from "../errors.js";
 import { credentialFingerprint } from "./credentialFingerprint.js";
 export class VerificationService {
   private readonly busy = new Set<string>();
@@ -9,6 +11,7 @@ export class VerificationService {
     private readonly dao: RunDao,
     private readonly verifier: VerifierAdapter,
     private readonly telemetry: TelemetryService,
+    private readonly scenarios: ScenarioService,
   ) {}
   async begin(id: string) {
     const run = this.dao.get(id);
@@ -30,9 +33,36 @@ export class VerificationService {
       this.dao.save(latest);
       this.telemetry.notify(id);
       return latest;
+    } catch (error) {
+      if (
+        error instanceof UpstreamError &&
+        (error.upstreamStatus >= 500 || error.upstreamStatus === 429)
+      ) {
+        this.recordError(id, error);
+        throw error;
+      }
+      if (error instanceof AppError && error.status === 503) {
+        this.recordError(id, error);
+        throw error;
+      }
+      this.scenarios.fail(
+        id,
+        "REQUEST",
+        "REQUEST_FAILED",
+        error instanceof Error ? error.message : "Presentation request failed.",
+      );
+      return this.dao.get(id);
     } finally {
       this.busy.delete(id);
     }
+  }
+  private recordError(id: string, error: Error) {
+    const latest = this.dao.get(id);
+    if (!["HELD", "VERIFYING"].includes(latest.phase)) return;
+    latest.error = error.message;
+    latest.updatedAt = new Date().toISOString();
+    this.dao.save(latest);
+    this.telemetry.notify(id);
   }
   async refresh(id: string) {
     const run = this.dao.get(id);
@@ -48,7 +78,16 @@ export class VerificationService {
       this.lastPoll.delete(this.lastPoll.keys().next().value!);
     try {
       const status = await this.verifier.status(run);
-      if (status === "ACTIVE") return this.dao.get(id);
+      if (status === "ACTIVE") {
+        const latest = this.dao.get(id);
+        if (latest.phase === "VERIFYING" && latest.error) {
+          latest.error = undefined;
+          latest.updatedAt = new Date().toISOString();
+          this.dao.save(latest);
+          this.telemetry.notify(id);
+        }
+        return latest;
+      }
       if (status !== "VP_SUBMITTED") {
         const latest = this.dao.get(id);
         if (latest.phase !== "VERIFYING") return latest;
@@ -58,7 +97,14 @@ export class VerificationService {
           status === "EXPIRED"
             ? "Presentation request expired. Start a new run."
             : `Presentation ended with status ${status}.`;
+        latest.scenarioEvidence = {
+          ...latest.scenarioEvidence,
+          stage: "REQUEST",
+          errorCode: status === "EXPIRED" ? "REQUEST_EXPIRED" : "REQUEST_ENDED",
+          detail: latest.error,
+        };
         latest.presentationUri = undefined;
+        latest.updatedAt = new Date().toISOString();
         this.dao.save(latest);
         this.telemetry.notify(id);
         return latest;
@@ -66,19 +112,83 @@ export class VerificationService {
       const result = await this.verifier.result(run);
       const latest = this.dao.get(id);
       if (latest.phase !== "VERIFYING") return latest;
+      latest.error = undefined;
       latest.result = result.payload;
+      latest.verification = {
+        ...result.verification,
+        checks: [
+          ...result.verification.checks,
+          ...(latest.presentationChecks ?? [
+            {
+              id: "presentation-evidence",
+              label: "Request binding and constraints",
+              source: "PLAYGROUND" as const,
+              status: "NOT_CHECKED" as const,
+              detail: "The submitted presentation was not observed.",
+            },
+          ]),
+        ],
+      };
+      latest.scenarioEvidence = {
+        ...latest.scenarioEvidence,
+        stage: "VERIFICATION",
+        errorCode: result.verdict,
+        rejectionReasonConfirmed: false,
+        detail: result.verification.upstreamAccepted
+          ? "Inji Verify accepted the presentation. The independent playground checks below can still expose protocol failures."
+          : "Inji Verify rejected the presentation. See the individual checks and error codes below; only the expected failure can satisfy a negative scenario.",
+      };
       latest.verdict = result.verdict;
       latest.phase = "COMPLETED";
       latest.presentationUri = undefined;
-      latest.credentialMatched = result.credentials.some((credential) =>
-        latest.credentialFingerprints.includes(
-          credentialFingerprint(credential),
-        ),
-      );
+      latest.credentialMatched =
+        result.credentials.length === 1 &&
+        result.credentials.every((credential) =>
+          latest.credentialFingerprints.includes(
+            credentialFingerprint(credential),
+          ),
+        );
+      const submitted = latest.submittedFingerprints;
+      latest.verification.checks.push({
+        id: "result-correlation",
+        label: "Result matches the submitted credential",
+        source: "PLAYGROUND",
+        status:
+          submitted?.length === 1 &&
+          result.credentials.length === 1 &&
+          submitted[0] === credentialFingerprint(result.credentials[0])
+            ? "PASS"
+            : submitted
+              ? "FAIL"
+              : "NOT_CHECKED",
+      });
+      latest.scenarioEvidence.rejectionReasonConfirmed =
+        latest.scenario !== "NONE" && scenarioOutcome(latest) === "PASS";
       latest.updatedAt = new Date().toISOString();
       this.dao.save(latest);
       this.telemetry.notify(id);
       return latest;
+    } catch (error) {
+      if (
+        error instanceof UpstreamError &&
+        (error.upstreamStatus >= 500 || error.upstreamStatus === 429)
+      ) {
+        this.recordError(id, error);
+        throw error;
+      }
+      if (error instanceof AppError && error.status === 503) {
+        this.recordError(id, error);
+        throw error;
+      }
+      this.scenarios.fail(
+        id,
+        "VERIFICATION",
+        "VERIFIER_RESPONSE_ERROR",
+        error instanceof Error
+          ? error.message
+          : "Unable to interpret verifier response.",
+      );
+      return this.dao.get(id);
     } finally {
       this.busy.delete(id);
     }

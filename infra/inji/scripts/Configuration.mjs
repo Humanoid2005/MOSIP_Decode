@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 export const root = fileURLToPath(new URL("../../../", import.meta.url));
+export const configHome = resolve(process.env.INJI_CONFIG_HOME || root);
+export const secretsDirectory = resolve(configHome, "infra/inji/secrets");
+export const environmentFile = resolve(configHome, ".env");
 export const playgroundOrigin = "http://localhost:5173";
 export const definitionId = "00000000-0000-4000-8000-000000000001";
 // Presentation definition per credential format; the SD-JWT definition is created by migration 005.
@@ -18,7 +21,7 @@ export class Configuration {
   }
 
   static async load() {
-    const values = parseEnv(await readFile(resolve(root, ".env"), "utf8"));
+    const values = parseEnv(await readFile(environmentFile, "utf8"));
     const required = [
       "INJI_PUBLIC_ORIGIN",
       "POSTGRES_PASSWORD",
@@ -77,7 +80,7 @@ export class Configuration {
     if (![8000, 5173].every((reserved) => port !== reserved))
       throw new Error("Gateway port conflicts with the playground.");
     for (const file of ["oidckeystore.p12", "verify-keystore.p12"]) {
-      const info = await stat(resolve(root, "infra/inji/secrets", file)).catch(
+      const info = await stat(resolve(secretsDirectory, file)).catch(
         () => null,
       );
       if (!info?.isFile() || !info.size)

@@ -1,3 +1,5 @@
+import { VerificationResult } from "../components/workbench/VerificationResult";
+import { ScenarioResult } from "../components/workbench/ScenarioResult";
 import { useState } from "react";
 import { Link } from "react-router";
 import { SquareTerminal } from "lucide-react";
@@ -20,7 +22,9 @@ export function InspectorPage() {
         .includes(filter.toLowerCase()),
     ) || [];
   const selected =
-    events.find((event) => event.id === selectedEvent) ?? events[0];
+    events.find((event) => event.id === selectedEvent) ??
+    events.find((event) => event.status >= 400) ??
+    events.at(-1);
   return (
     <>
       <PageTitle title="Every exchange, in context.">
@@ -60,6 +64,13 @@ export function InspectorPage() {
           />
         </label>
       </div>
+      {current.data && (
+        <div className="mb-5 space-y-4">
+          <ErrorNotice error={current.data.error} />
+          <ScenarioResult run={current.data} />
+          <VerificationResult run={current.data} />
+        </div>
+      )}
       {current.isFetching && !current.data ? (
         <Loading />
       ) : selected ? (

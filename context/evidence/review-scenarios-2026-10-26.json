@@ -1,0 +1,102 @@
+[
+  {
+    "id": "7640db4e-5966-4990-83a3-0703315c5cb5",
+    "wallet": "MOCK_WALLET",
+    "scenario": "WRONG_NONCE",
+    "phase": "COMPLETED",
+    "verdict": "VALID",
+    "outcome": "FAIL",
+    "scenarioResult": "FAIL",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "568e4360-2084-4784-b405-d58169483af4",
+    "wallet": "MOCK_WALLET",
+    "scenario": "BAD_SIGNATURE",
+    "phase": "COMPLETED",
+    "verdict": "INVALID",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "1d837fb0-e8a3-46c6-8328-55eac787f20b",
+    "wallet": "MOCK_WALLET",
+    "scenario": "NONE",
+    "phase": "COMPLETED",
+    "verdict": "VALID",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "PASS"
+  },
+  {
+    "id": "d3382e3f-df8c-45f8-8869-b9d9944c1610",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "PROOF_MISMATCH",
+    "phase": "FAILED",
+    "verdict": "ERROR",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "ff5172b0-9f39-4f3b-b3db-b8439779b24a",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "FORMAT_MISMATCH",
+    "phase": "FAILED",
+    "verdict": "ERROR",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "b744ba8d-e87d-430e-b11b-845d6f898ec5",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "WRONG_TYPE",
+    "phase": "FAILED",
+    "verdict": "ERROR",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "8b3708c7-6366-4947-bb4b-697cdd051248",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "EXPIRED_CREDENTIAL",
+    "phase": "COMPLETED",
+    "verdict": "EXPIRED",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "9b2859b5-cbfd-4446-87a5-48b8cbcb12ef",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "MODIFIED_CLAIM",
+    "phase": "COMPLETED",
+    "verdict": "INVALID",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "8b732b39-bfd4-4ec6-99d1-2570f4be057f",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "BAD_SIGNATURE",
+    "phase": "COMPLETED",
+    "verdict": "INVALID",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "FAIL"
+  },
+  {
+    "id": "3ab20205-c151-4ecb-b459-f17ad9395be4",
+    "wallet": "INJI_MIMOTO",
+    "scenario": "NONE",
+    "phase": "COMPLETED",
+    "verdict": "VALID",
+    "outcome": "PASS",
+    "scenarioResult": "PASS",
+    "interoperabilityOutcome": "PASS"
+  }
+]

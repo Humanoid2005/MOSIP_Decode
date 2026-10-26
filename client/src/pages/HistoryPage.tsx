@@ -1,3 +1,7 @@
+import {
+  scenarioDefinition,
+  scenarios,
+} from "../../../server/models/scenarios";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Download, History } from "lucide-react";
@@ -17,10 +21,12 @@ export function HistoryPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("All outcomes");
   const [format, setFormat] = useState("All formats");
+  const [scenario, setScenario] = useState("ALL");
   const [version, setVersion] = useState("");
   const items = runs.data || [];
   const filtered = items.filter(
     (run) =>
+      (scenario === "ALL" || run.scenario === scenario) &&
       (filter === "All outcomes" || runOutcome(run) === filter) &&
       (format === "All formats" || run.configuration.format === format) &&
       run.environment.stackVersion
@@ -67,7 +73,11 @@ export function HistoryPage() {
               {[
                 "All outcomes",
                 "Pass",
-                "Valid · incomplete evidence",
+                "Expected failure confirmed",
+                "Unexpected acceptance",
+                "Inconclusive",
+                "Incomplete evidence",
+                "Protocol checks failed",
                 "Invalid",
                 "Expired",
                 "Error",
@@ -95,6 +105,21 @@ export function HistoryPage() {
                   </option>
                 ),
               )}
+            </select>
+          </label>
+          <label className="text-xs text-slate-500">
+            Scenario
+            <select
+              className="field"
+              value={scenario}
+              onChange={(event) => setScenario(event.target.value)}
+            >
+              <option value="ALL">All scenarios</option>
+              {scenarios.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
             </select>
           </label>
           <label className="text-xs text-slate-500">
@@ -141,7 +166,8 @@ export function HistoryPage() {
                       </button>
                       <p className="mt-1 text-xs text-slate-500">
                         {walletName(run.wallet)} ·{" "}
-                        {formatName(run.configuration.format)}
+                        {formatName(run.configuration.format)} ·{" "}
+                        {scenarioDefinition(run.scenario).name}
                       </p>
                     </td>
                     <td className="px-5 py-5 text-xs text-slate-500 tabular-nums">
@@ -186,6 +212,7 @@ export function HistoryPage() {
                   setFilter("All outcomes");
                   setFormat("All formats");
                   setVersion("");
+                  setScenario("ALL");
                 }}
               >
                 Clear filters

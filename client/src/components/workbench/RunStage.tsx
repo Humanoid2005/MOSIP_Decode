@@ -1,30 +1,39 @@
-import { useEffect } from "react";
+import { ScenarioResult } from "./ScenarioResult";
+import { VerificationResult } from "./VerificationResult";
+import { ReplayPanel } from "./ReplayPanel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ArrowRight, Download, ShieldCheck } from "lucide-react";
 import { api } from "../../api/PlaygroundApi";
 import type { TestRun } from "../../models/playground";
 import { useRunAction } from "../../services/usePlayground";
-import { formatName, runOutcome, webPresentationUrl } from "../../services/presentation";
+import {
+  formatName,
+  runOutcome,
+  webPresentationUrl,
+} from "../../services/presentation";
 import { useWorkspace } from "../../store/workspace";
 import { ErrorNotice } from "../ui";
 import { WalletHandoff } from "./WalletHandoff";
 import { MockWalletPanel } from "./MockWalletPanel";
+import { MimotoWalletPanel } from "../mimoto-wallet/MimotoWalletPanel";
 export function RunStage({ run }: { run: TestRun }) {
   const action = useRunAction();
   const select = useWorkspace((state) => state.selectRun);
   const queryClient = useQueryClient();
   const refresh = useQuery({
     queryKey: ["verification-status", run.id],
-    queryFn: () => api.action(run.id, "refresh"),
+    queryFn: async () => {
+      const result = await api.action(run.id, "refresh");
+      await queryClient.invalidateQueries({ queryKey: ["run", run.id] });
+      await queryClient.invalidateQueries({ queryKey: ["runs"] });
+      return result;
+    },
     enabled: run.phase === "VERIFYING",
     refetchInterval: (query) => (query.state.error ? false : 3000),
     retry: false,
     refetchOnWindowFocus: false,
   });
-  useEffect(() => {
-    if (refresh.data) queryClient.setQueryData(["run", run.id], refresh.data);
-  }, [refresh.data, queryClient, run.id]);
   const finished = ["COMPLETED", "FAILED", "CANCELLED"].includes(run.phase);
   return (
     <section className="panel overflow-hidden">
@@ -43,41 +52,48 @@ export function RunStage({ run }: { run: TestRun }) {
         </span>
       </div>
       <div className="space-y-4 p-6">
+        <ScenarioResult run={run} />
+        <VerificationResult run={run} />
         <ErrorNotice error={run.error} />
         <ErrorNotice error={action.error} />
+        {run.wallet === "INJI_MIMOTO" &&
+          ["ISSUING", "VERIFYING"].includes(run.phase) && (
+            <MimotoWalletPanel key={run.id} run={run} />
+          )}
         {run.wallet === "MOCK_WALLET" &&
           ["ISSUING", "VERIFYING"].includes(run.phase) && (
             <MockWalletPanel run={run} />
           )}
-        {run.phase === "ISSUING" && run.wallet !== "MOCK_WALLET" && (
-          <>
-            <p className="text-sm leading-6 text-slate-500">
-              Complete issuance in your wallet. Confirm receipt only after the
-              credential appears there.
-            </p>
-            <WalletHandoff
-              uri={run.offerUri}
-              webUrl={
-                run.wallet === "INJI_WEB"
-                  ? run.environment.webWalletUrl
-                  : undefined
-              }
-            />
-            <p className="text-xs leading-5 text-slate-500">
-              {run.credentialObserved
-                ? "The bridge observed a credential response. Wallet storage still needs your confirmation."
-                : "No credential response has been observed. Direct wallet-to-issuer traffic is not visible here."}
-            </p>
-            <button
-              className="btn-primary"
-              disabled={action.isPending}
-              onClick={() => action.mutate({ id: run.id, action: "holder" })}
-            >
-              I received the credential
-              <ArrowRight size={15} />
-            </button>
-          </>
-        )}
+        {run.phase === "ISSUING" &&
+          !["MOCK_WALLET", "INJI_MIMOTO"].includes(run.wallet) && (
+            <>
+              <p className="text-sm leading-6 text-slate-500">
+                Complete issuance in your wallet. Confirm receipt only after the
+                credential appears there.
+              </p>
+              <WalletHandoff
+                uri={run.offerUri}
+                webUrl={
+                  run.wallet === "INJI_WEB"
+                    ? run.environment.webWalletUrl
+                    : undefined
+                }
+              />
+              <p className="text-xs leading-5 text-slate-500">
+                {run.credentialObserved
+                  ? "The bridge observed a credential response. Wallet storage still needs your confirmation."
+                  : "No credential response has been observed. Direct wallet-to-issuer traffic is not visible here."}
+              </p>
+              <button
+                className="btn-primary"
+                disabled={action.isPending}
+                onClick={() => action.mutate({ id: run.id, action: "holder" })}
+              >
+                I received the credential
+                <ArrowRight size={15} />
+              </button>
+            </>
+          )}
         {run.phase === "HELD" && (
           <>
             <ShieldCheck size={36} className="text-teal-700" />
@@ -99,8 +115,18 @@ export function RunStage({ run }: { run: TestRun }) {
         )}
         {run.phase === "VERIFYING" && (
           <>
-            {run.wallet !== "MOCK_WALLET" && (
-              <WalletHandoff uri={run.presentationUri} webPresentationUrl={run.wallet === "INJI_WEB" ? webPresentationUrl(run.environment.webWalletUrl, run.presentationUri) : undefined} />
+            {!["MOCK_WALLET", "INJI_MIMOTO"].includes(run.wallet) && (
+              <WalletHandoff
+                uri={run.presentationUri}
+                webPresentationUrl={
+                  run.wallet === "INJI_WEB"
+                    ? webPresentationUrl(
+                        run.environment.webWalletUrl,
+                        run.presentationUri,
+                      )
+                    : undefined
+                }
+              />
             )}
             <ErrorNotice error={refresh.error} />
             {refresh.error ? (
@@ -128,6 +154,7 @@ export function RunStage({ run }: { run: TestRun }) {
                   ? "This local run has been stopped. Requests already sent to Inji may remain active until they expire."
                   : "Review the protocol evidence and download the report for this run."}
             </p>
+            <ReplayPanel run={run} />
             <div className="flex flex-wrap gap-3">
               <a href={api.reportUrl(run.id)} className="btn-primary">
                 <Download size={16} />

@@ -31,6 +31,7 @@ export const initialEnvironment: Environment = {
   verifyUrl: endpoint("INJI_VERIFY_URL"),
   mimotoUrl: endpoint("INJI_MIMOTO_URL"),
   webWalletUrl: endpoint("INJI_WEB_URL"),
+  embeddedWalletUrl: endpoint("INJI_EMBEDDED_WALLET_URL"),
   authorizationUrl: endpoint("INJI_AUTHORIZATION_URL"),
   publicBaseUrl:
     process.env.PUBLIC_BASE_URL || `http://localhost:${settings.port}`,

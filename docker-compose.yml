@@ -14,7 +14,7 @@ services:
         bind:
           create_host_path: false
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -109,18 +109,35 @@ services:
         read_only: true
         bind:
           create_host_path: false
-      - type: bind
-        source: ./infra/inji/secrets/oidckeystore.p12
-        target: /home/mosip/certs/oidckeystore.p12
-        bind:
-          create_host_path: false
+      - wallet-keys:/home/mosip/certs
     depends_on:
+      wallet-keys-init:
+        condition: service_completed_successfully
       database:
         condition: service_healthy
       datashare-service:
         condition: service_started
       config-server:
         condition: service_started
+
+  wallet-keys-init:
+    image: node:22.22.0-bookworm-slim
+    user: root
+    command: [node, /setup/initialize-wallet-keys.mjs]
+    volumes:
+      - type: bind
+        source: ./infra/inji/scripts/initialize-wallet-keys.mjs
+        target: /setup/initialize-wallet-keys.mjs
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/inji/secrets/oidckeystore.p12
+        target: /seed/oidckeystore.p12
+        read_only: true
+        bind:
+          create_host_path: false
+      - wallet-keys:/keys
 
   inji-web:
     image: injistack/inji-web:0.16.0
@@ -197,3 +214,4 @@ volumes:
   postgres-data:
   certify-keys:
   object-data:
+  wallet-keys:

@@ -40,7 +40,12 @@ export class DatabaseRenderer {
     const migration = (name) => readFile(resolve(migrations, name), "utf8");
     await writeFile(
       resolve(folder, "01-certify.sql"),
-      certify + "\n" + (await migration("004-farmer-sd-jwt-certify.sql")),
+      certify + "\n" + (await migration("004-farmer-sd-jwt-certify.sql")) +
+        (this.config.values.INJI_LOCAL_DEVELOPMENT === "true"
+          ? "\n" + (await migration("006-synthetic-farmer-registry.sql")) +
+            "\n" + (await migration("007-expired-credential.sql")) +
+            "\n" + (await migration("008-unsupported-did-credential.sql"))
+          : ""),
     );
     await writeFile(
       resolve(folder, "02-mimoto.sql"),

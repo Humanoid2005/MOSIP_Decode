@@ -15,7 +15,7 @@ WORKDIR /workspace/client
 COPY client/package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY client/ ./
-COPY server/models/dtos.ts /workspace/server/models/dtos.ts
+COPY server/models/ /workspace/server/models/
 RUN npm run lint && npm run build
 
 FROM nginx:1.26.3 AS client

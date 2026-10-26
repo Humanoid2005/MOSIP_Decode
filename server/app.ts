@@ -13,6 +13,7 @@ import { InjiIssuerAdapter } from "./services/inji/InjiIssuerAdapter.js";
 import { InjiVerifierAdapter } from "./services/inji/InjiVerifierAdapter.js";
 import { OfferService } from "./services/run-service/OfferService.js";
 import { RunService } from "./services/run-service/RunService.js";
+import { VerificationCoordinator } from "./services/run-service/VerificationCoordinator.js";
 import { VerificationService } from "./services/run-service/VerificationService.js";
 import { ReportService } from "./services/run-service/ReportService.js";
 import { ProxyCaptureService } from "./services/proxy-service/ProxyCaptureService.js";
@@ -22,6 +23,14 @@ import { apiRoutes } from "./controllers/api.js";
 import { mockWalletRoutes } from "./controllers/mockWallet.js";
 import { InMemoryWalletSessionDao } from "./models/InMemoryWalletSessionDao.js";
 import { MockWalletService } from "./services/mock-wallet/MockWalletService.js";
+import { InMemoryMimotoSessionDao } from "./models/InMemoryMimotoSessionDao.js";
+import { MimotoClient } from "./services/mimoto-wallet/MimotoClient.js";
+import { MimotoIssuanceService } from "./services/mimoto-wallet/MimotoIssuanceService.js";
+import { MimotoPresentationService } from "./services/mimoto-wallet/MimotoPresentationService.js";
+import { MimotoWalletService } from "./services/mimoto-wallet/MimotoWalletService.js";
+import { mimotoWalletRoutes } from "./controllers/mimotoWallet.js";
+
+import { ScenarioService } from "./services/scenario-service/ScenarioService.js";
 
 export function createApplication() {
   const dao = new InMemoryRunDao();
@@ -29,6 +38,7 @@ export function createApplication() {
   const http = new HttpClient();
   const telemetry = new TelemetryService(dao);
   const observedHttp = new ObservedHttpClient(http, telemetry);
+  const scenarios = new ScenarioService(dao, telemetry, observedHttp);
   const issuer = new InjiIssuerAdapter(observedHttp);
   const runs = new RunService(
     dao,
@@ -39,8 +49,9 @@ export function createApplication() {
   );
   const verification = new VerificationService(
     dao,
-    new InjiVerifierAdapter(observedHttp),
+    new InjiVerifierAdapter(observedHttp, scenarios),
     telemetry,
+    scenarios,
   );
   const wallet = new MockWalletService(
     dao,
@@ -50,10 +61,25 @@ export function createApplication() {
     telemetry,
     settings.mockWalletClientId,
     `${settings.clientOrigin}/api/v1/mock-wallet/callback`,
+    scenarios,
   );
+  const mimoto = new MimotoClient(http, telemetry);
+  const embeddedWallet = new MimotoWalletService(
+    runs,
+    dao,
+    new InMemoryMimotoSessionDao(),
+    mimoto,
+    new MimotoIssuanceService(mimoto),
+    new MimotoPresentationService(mimoto, scenarios),
+    scenarios,
+  );
+  const embeddedOrigin = initialEnvironment.embeddedWalletUrl
+    ? new URL(initialEnvironment.embeddedWalletUrl).origin
+    : "";
   const proxy = new ProtocolProxy(
     environment,
     new ProxyCaptureService(dao, runs, telemetry),
+    scenarios,
   );
   const app = express();
   app.disable("x-powered-by");
@@ -70,6 +96,7 @@ export function createApplication() {
   );
   const origins = [
     settings.clientOrigin,
+    ...(embeddedOrigin ? [embeddedOrigin] : []),
     `http://localhost:${settings.port}`,
     `http://127.0.0.1:${settings.port}`,
   ];
@@ -103,6 +130,10 @@ export function createApplication() {
     }),
   );
   app.use("/api/v1", mockWalletRoutes(wallet));
+  app.use(
+    "/v1/mimoto/playground",
+    mimotoWalletRoutes(embeddedWallet, embeddedOrigin),
+  );
   app.use((_req, _res, next) => next(new AppError(404, "Endpoint not found.")));
   const errors: ErrorRequestHandler = (error, _req, res, _next) => {
     const status =
@@ -119,6 +150,7 @@ export function createApplication() {
   };
   app.use(errors);
   const server = createServer(app);
+  new VerificationCoordinator(dao, verification).attach(server);
   new TelemetrySocket().attach(server, telemetry, origins);
   return { app, server };
 }

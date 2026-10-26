@@ -1,0 +1,1265 @@
+{
+  "reportVersion": 3,
+  "scenarioResult": "PASS",
+  "expectedResult": "Valid credential with issuance and holder evidence.",
+  "outcome": "PASS",
+  "interoperabilityOutcome": "PASS",
+  "id": "5af34750-c9a8-4cde-b63f-a1d561b409a0",
+  "scenario": "NONE",
+  "scenarioEvidence": {
+    "applied": false,
+    "stage": "VERIFICATION",
+    "errorCode": "VALID",
+    "rejectionReasonConfirmed": false,
+    "detail": "Inji Verify accepted the presentation. The independent playground checks below can still expose protocol failures."
+  },
+  "createdAt": "2026-10-26T16:36:50.457Z",
+  "updatedAt": "2026-10-26T16:36:59.442Z",
+  "wallet": "INJI_MIMOTO",
+  "configuration": {
+    "id": "FarmerCredential",
+    "name": "Farmer Verifiable Credential",
+    "format": "ldp_vc",
+    "proofTypes": [
+      "EdDSA"
+    ]
+  },
+  "environment": {
+    "certifyUrl": "http://certify:8090/v1/certify/issuance",
+    "issuerUrl": "https://inji.127.0.0.1.sslip.io",
+    "verifyUrl": "http://verify-service:8080/v1/verify",
+    "mimotoUrl": "http://mimoto-service:8099/v1/mimoto",
+    "webWalletUrl": "https://inji.127.0.0.1.sslip.io",
+    "embeddedWalletUrl": "https://inji.127.0.0.1.sslip.io/playground",
+    "authorizationUrl": "http://keycloak:8080/auth/realms/inji",
+    "publicBaseUrl": "https://inji.127.0.0.1.sslip.io",
+    "verifierClientId": "did:web:inji.127.0.0.1.sslip.io:v1:verify",
+    "stackVersion": "certify-0.14.0_mimoto-0.21.0_web-0.16.0_verify-0.17.0",
+    "presentationDefinitionIds": {
+      "ldp_vc": "00000000-0000-4000-8000-000000000001",
+      "vc+sd-jwt": "00000000-0000-4000-8000-000000000002"
+    }
+  },
+  "phase": "COMPLETED",
+  "verdict": "VALID",
+  "holderConfirmed": true,
+  "credentialObserved": true,
+  "credentialMatched": true,
+  "events": [
+    {
+      "source": "HTTP",
+      "title": "Issuer metadata",
+      "method": "GET",
+      "endpoint": "http://certify:8090/v1/certify/issuance/.well-known/openid-credential-issuer",
+      "status": 200,
+      "durationMs": 16,
+      "request": null,
+      "response": {
+        "display": [
+          {
+            "name": "Farmer Issuer",
+            "locale": "en"
+          }
+        ],
+        "credential_issuer": "https://inji.127.0.0.1.sslip.io",
+        "authorization_servers": [
+          "https://inji.127.0.0.1.sslip.io/auth/realms/inji"
+        ],
+        "credential_endpoint": "https://inji.127.0.0.1.sslip.io/v1/certify/issuance/credential",
+        "credential_configurations_supported": {
+          "FarmerCredentialUnsupportedDid": {
+            "format": "ldp_vc",
+            "scope": "mock_identity_vc_unsupported_did",
+            "display": [
+              {
+                "logo": {
+                  "url": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+                  "alt_text": "Farmer Credential Logo"
+                },
+                "name": "Farmer Credential (unsupported DID scenario)",
+                "locale": "en",
+                "text_color": "#FFFFFF",
+                "background_color": "#12107c",
+                "background_image": {
+                  "uri": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png"
+                }
+              }
+            ],
+            "order": [
+              "fullName",
+              "mobileNumber",
+              "dateOfBirth",
+              "gender",
+              "state",
+              "district",
+              "villageOrTown",
+              "postalCode",
+              "landArea",
+              "landOwnershipType",
+              "primaryCropType",
+              "secondaryCropType",
+              "farmerID"
+            ],
+            "cryptographic_binding_methods_supported": [
+              "did:jwk"
+            ],
+            "credential_signing_alg_values_supported": [
+              "EdDSA"
+            ],
+            "proof_types_supported": {
+              "jwt": {
+                "proof_signing_alg_values_supported": [
+                  "RS256",
+                  "ES256"
+                ]
+              }
+            },
+            "credential_definition": {
+              "type": [
+                "FarmerCredential",
+                "FarmerCredentialUnsupportedDid",
+                "VerifiableCredential"
+              ],
+              "credentialSubject": {
+                "fullName": {
+                  "display": [
+                    {
+                      "name": "Full Name",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "dateOfBirth": {
+                  "display": [
+                    {
+                      "name": "Date of Birth",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "gender": {
+                  "display": [
+                    {
+                      "name": "Gender",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "phone": {
+                  "display": [
+                    {
+                      "name": "Phone Number",
+                      "locale": "en"
+                    }
+                  ]
+                }
+              },
+              "@context": [
+                "https://www.w3.org/2018/credentials/v1"
+              ]
+            }
+          },
+          "FarmerCredentialExpired": {
+            "format": "ldp_vc",
+            "scope": "mock_identity_vc_expired",
+            "display": [
+              {
+                "logo": {
+                  "url": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+                  "alt_text": "Farmer Credential Logo"
+                },
+                "name": "Farmer Credential (expired scenario)",
+                "locale": "en",
+                "text_color": "#FFFFFF",
+                "background_color": "#12107c",
+                "background_image": {
+                  "uri": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png"
+                }
+              }
+            ],
+            "order": [
+              "fullName",
+              "mobileNumber",
+              "dateOfBirth",
+              "gender",
+              "state",
+              "district",
+              "villageOrTown",
+              "postalCode",
+              "landArea",
+              "landOwnershipType",
+              "primaryCropType",
+              "secondaryCropType",
+              "farmerID"
+            ],
+            "cryptographic_binding_methods_supported": [
+              "did:jwk"
+            ],
+            "credential_signing_alg_values_supported": [
+              "EdDSA"
+            ],
+            "proof_types_supported": {
+              "jwt": {
+                "proof_signing_alg_values_supported": [
+                  "RS256",
+                  "ES256"
+                ]
+              }
+            },
+            "credential_definition": {
+              "type": [
+                "FarmerCredential",
+                "FarmerCredentialExpired",
+                "VerifiableCredential"
+              ],
+              "credentialSubject": {
+                "fullName": {
+                  "display": [
+                    {
+                      "name": "Full Name",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "dateOfBirth": {
+                  "display": [
+                    {
+                      "name": "Date of Birth",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "gender": {
+                  "display": [
+                    {
+                      "name": "Gender",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "phone": {
+                  "display": [
+                    {
+                      "name": "Phone Number",
+                      "locale": "en"
+                    }
+                  ]
+                }
+              },
+              "@context": [
+                "https://www.w3.org/2018/credentials/v1"
+              ]
+            }
+          },
+          "FarmerCredential": {
+            "format": "ldp_vc",
+            "scope": "mock_identity_vc_ldp",
+            "display": [
+              {
+                "logo": {
+                  "url": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+                  "alt_text": "Farmer Credential Logo"
+                },
+                "name": "Farmer Verifiable Credential",
+                "locale": "en",
+                "text_color": "#FFFFFF",
+                "background_color": "#12107c",
+                "background_image": {
+                  "uri": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png"
+                }
+              }
+            ],
+            "order": [
+              "fullName",
+              "mobileNumber",
+              "dateOfBirth",
+              "gender",
+              "state",
+              "district",
+              "villageOrTown",
+              "postalCode",
+              "landArea",
+              "landOwnershipType",
+              "primaryCropType",
+              "secondaryCropType",
+              "farmerID"
+            ],
+            "cryptographic_binding_methods_supported": [
+              "did:jwk"
+            ],
+            "credential_signing_alg_values_supported": [
+              "EdDSA"
+            ],
+            "proof_types_supported": {
+              "jwt": {
+                "proof_signing_alg_values_supported": [
+                  "RS256",
+                  "ES256"
+                ]
+              }
+            },
+            "credential_definition": {
+              "type": [
+                "FarmerCredential",
+                "VerifiableCredential"
+              ],
+              "credentialSubject": {
+                "fullName": {
+                  "display": [
+                    {
+                      "name": "Full Name",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "dateOfBirth": {
+                  "display": [
+                    {
+                      "name": "Date of Birth",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "gender": {
+                  "display": [
+                    {
+                      "name": "Gender",
+                      "locale": "en"
+                    }
+                  ]
+                },
+                "phone": {
+                  "display": [
+                    {
+                      "name": "Phone Number",
+                      "locale": "en"
+                    }
+                  ]
+                }
+              },
+              "@context": [
+                "https://www.w3.org/2018/credentials/v1"
+              ]
+            }
+          },
+          "FarmerCredentialSdJwt": {
+            "format": "vc+sd-jwt",
+            "scope": "mock_identity_vc_sd_jwt",
+            "display": [
+              {
+                "logo": {
+                  "url": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+                  "alt_text": "Farmer Credential Logo"
+                },
+                "name": "Farmer Credential (SD-JWT)",
+                "locale": "en",
+                "text_color": "#FFFFFF",
+                "background_color": "#12107c",
+                "background_image": {
+                  "uri": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png"
+                }
+              }
+            ],
+            "order": [
+              "fullName",
+              "mobileNumber",
+              "dateOfBirth",
+              "gender",
+              "state",
+              "district",
+              "villageOrTown",
+              "postalCode",
+              "landArea",
+              "landOwnershipType",
+              "primaryCropType",
+              "secondaryCropType",
+              "farmerID"
+            ],
+            "vct": "FarmerCredential",
+            "cryptographic_binding_methods_supported": [
+              "did:jwk"
+            ],
+            "credential_signing_alg_values_supported": [
+              "ES256"
+            ],
+            "proof_types_supported": {
+              "jwt": {
+                "proof_signing_alg_values_supported": [
+                  "RS256",
+                  "ES256"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "id": "234b8fd5-d21f-4fed-9e73-554de5cf9cb5",
+      "timestamp": "2026-10-26T16:36:50.473Z"
+    },
+    {
+      "source": "PROXY",
+      "title": "authorization: /protocol/openid-connect/token",
+      "endpoint": "http://keycloak:8080/auth/realms/inji/protocol/openid-connect/token",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 18,
+      "request": {
+        "code": "[redacted]",
+        "client_id": "inji-wallet",
+        "grant_type": "authorization_code",
+        "redirect_uri": "https://inji.127.0.0.1.sslip.io/playground/wallet-callback",
+        "client_assertion": "[redacted]",
+        "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        "code_verifier": "[redacted]"
+      },
+      "response": {
+        "access_token": "[redacted]",
+        "expires_in": 300,
+        "refresh_expires_in": 1800,
+        "refresh_token": "[redacted]",
+        "token_type": "Bearer",
+        "not-before-policy": 0,
+        "session_state": "defbb892-a460-4eb9-9793-9390c0c83710",
+        "scope": "mock_identity_vc_ldp email profile basic",
+        "c_nonce_expires_in": 300,
+        "c_nonce": "bIttYhNo2pzoAz1Ns33d34AagnoSHarSVXm-eaaV13Q"
+      },
+      "id": "14ec2758-7b20-4c0b-ae7b-24857e178acf",
+      "timestamp": "2026-10-26T16:36:51.248Z"
+    },
+    {
+      "source": "PROXY",
+      "title": "certify: /credential",
+      "endpoint": "http://certify:8090/v1/certify/issuance/credential",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 1704,
+      "request": {
+        "format": "ldp_vc",
+        "proof": {
+          "jwt": "eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Imt0eSI6IkVDIiwidXNlIjoic2lnIiwiY3J2IjoiUC0yNTYiLCJ4IjoiOWNDcHhOR3RMVUtnQUhXcXlPN3RFUTgybTYtdDNYQzF5aEk4Mk9fUDFIUSIsInkiOiJQelBlMHRjU1lpN25YSGlBbHprV0YyOXVFRkxiSFJWMnpxN1pMZ2V2V1h3IiwiYWxnIjoiRVMyNTYifX0.eyJpc3MiOiJpbmppLXdhbGxldCIsInN1YiI6Imluamktd2FsbGV0IiwiYXVkIjoiaHR0cHM6Ly9pbmppLjEyNy4wLjAuMS5zc2xpcC5pbyIsImV4cCI6MTc5MzA1MDYxMSwiaWF0IjoxNzkzMDMyNjExLCJub25jZSI6ImJJdHRZaE5vMnB6b0F6MU5zMzNkMzRBYWdub1NIYXJTVlhtLWVhYVYxM1EifQ.df25jbgcLLCMj2xRaSIKmlrvooxGe64kdWm0wSR5mjtog2OsHmRIEor-xIwcyyqOttWdk4p_y42hztkGpUScXQ",
+          "cwt": null,
+          "proof_type": "jwt"
+        },
+        "credential_definition": {
+          "type": [
+            "FarmerCredential",
+            "VerifiableCredential"
+          ],
+          "credentialSubject": null,
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1"
+          ]
+        }
+      },
+      "response": {
+        "credential": {
+          "issuanceDate": "2026-10-26T16:36:51.371Z",
+          "credentialSubject": {
+            "gender": "Not specified",
+            "primaryCropType": "Maize",
+            "mobileNumber": "0000000000",
+            "postalCode": "000000",
+            "landArea": "1 hectare (synthetic)",
+            "fullName": "Synthetic Demo Farmer b55bd424",
+            "secondaryCropType": "Rice",
+            "dateOfBirth": "01-01-1990",
+            "face": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAFCAYAAABW1IzHAAAAHklEQVQokWNgGPaAkZHxPyMj439sYrSQo51PBgsAALa0ECF30JSdAAAAAElFTkSuQmCC",
+            "farmerID": "DEMO-b55bd424-05ca-3137-813d-cf725276a6a2",
+            "villageOrTown": "Synthetic Village",
+            "district": "Demo District",
+            "id": "did:jwk:eyJrdHkiOiJFQyIsInVzZSI6InNpZyIsImNydiI6IlAtMjU2IiwieCI6IjljQ3B4Tkd0TFVLZ0FIV3F5Tzd0RVE4Mm02LXQzWEMxeWhJODJPX1AxSFEiLCJ5IjoiUHpQZTB0Y1NZaTduWEhpQWx6a1dGMjl1RUZMYkhSVjJ6cTdaTGdldldYdyIsImFsZyI6IkVTMjU2In0=",
+            "state": "Demo State",
+            "landOwnershipType": "Demo only"
+          },
+          "id": "https://mosip.io/credential/36d2d0db-3b07-4e86-a695-f436b6376151",
+          "type": [
+            "VerifiableCredential",
+            "FarmerCredential"
+          ],
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1",
+            "https://inji.127.0.0.1.sslip.io/config/farmer.json",
+            "https://w3id.org/security/suites/ed25519-2020/v1"
+          ],
+          "issuer": "did:web:inji.127.0.0.1.sslip.io",
+          "expirationDate": "2028-10-25T16:36:51.371Z",
+          "proof": {
+            "type": "Ed25519Signature2020",
+            "created": "2026-10-26T16:36:51Z",
+            "proofPurpose": "assertionMethod",
+            "verificationMethod": "did:web:inji.127.0.0.1.sslip.io#kiPoAJSKvTI0Wg87qFSny2pl4TTYblqExC9EIOlmv2I",
+            "proofValue": "z49Dr3GtPQt94fGYTWo5LPxtKqD6dBvr5L6ynxjGKbAXw5yM3oyiwz5XcQ3XDw76AEme9y3Jky3MHF5RMRHwACDrs"
+          }
+        }
+      },
+      "id": "be2437ca-af85-45a3-a19e-f25850b9ddc0",
+      "timestamp": "2026-10-26T16:36:53.008Z"
+    },
+    {
+      "source": "WALLET",
+      "title": "Mimoto: POST /wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/credentials",
+      "method": "POST",
+      "endpoint": "http://mimoto-service:8099/v1/mimoto/wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/credentials",
+      "status": 200,
+      "durationMs": 3245,
+      "request": {
+        "issuer": "Farmer",
+        "credentialConfigurationId": "FarmerCredential",
+        "code": "[redacted]",
+        "grantType": "authorization_code",
+        "redirectUri": "https://inji.127.0.0.1.sslip.io/playground/wallet-callback",
+        "codeVerifier": "[redacted]"
+      },
+      "response": {
+        "issuerDisplayName": "Playground synthetic issuer",
+        "issuerLogo": "https://inji.127.0.0.1.sslip.io/config/farmer-logo.svg",
+        "credentialTypeDisplayName": "Farmer Verifiable Credential",
+        "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+        "credentialId": "0d2bcd9f-8413-45c7-9fa4-b01a05dea834"
+      },
+      "id": "ed45be24-2bcb-4ecd-af05-3b0a7c15e820",
+      "timestamp": "2026-10-26T16:36:54.388Z"
+    },
+    {
+      "source": "WALLET",
+      "title": "Mimoto stored the credential",
+      "method": "",
+      "endpoint": "",
+      "status": 0,
+      "durationMs": 0,
+      "request": null,
+      "response": {
+        "evidence": "Mimoto's authenticated wallet API returned the stored credential ID."
+      },
+      "id": "e534ea6f-e883-4ab7-bb1f-caedad113179",
+      "timestamp": "2026-10-26T16:36:54.390Z"
+    },
+    {
+      "source": "HTTP",
+      "title": "Presentation definition",
+      "method": "GET",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-definition/00000000-0000-4000-8000-000000000001",
+      "status": 200,
+      "durationMs": 26,
+      "request": null,
+      "response": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "input_descriptors": [
+          {
+            "id": "farmer",
+            "format": {
+              "ldp_vc": {
+                "proof_type": [
+                  "Ed25519Signature2020"
+                ]
+              }
+            },
+            "constraints": {
+              "fields": [
+                {
+                  "path": [
+                    "$.type[*]"
+                  ],
+                  "filter": {
+                    "type": "string",
+                    "pattern": "FarmerCredential"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "name": "Farmer credential",
+        "purpose": "Verify the locally issued farmer credential",
+        "format": {
+          "ldp_vc": {
+            "proof_type": [
+              "Ed25519Signature2020"
+            ]
+          }
+        }
+      },
+      "id": "75fc0b86-8fae-42f5-a2d3-5d011c41adf9",
+      "timestamp": "2026-10-26T16:36:54.462Z"
+    },
+    {
+      "source": "HTTP",
+      "title": "Presentation request",
+      "method": "POST",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-request",
+      "status": 201,
+      "durationMs": 42,
+      "request": {
+        "clientId": "did:web:inji.127.0.0.1.sslip.io:v1:verify",
+        "transactionId": "5af34750-c9a8-4cde-b63f-a1d561b409a0",
+        "nonce": "vHo-sSpdQdpKJNcBh8Pi2UeBNKpY4PW5VB2yhV_yZOg",
+        "presentationDefinition": {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "input_descriptors": [
+            {
+              "id": "farmer",
+              "format": {
+                "ldp_vc": {
+                  "proof_type": [
+                    "Ed25519Signature2020"
+                  ]
+                }
+              },
+              "constraints": {
+                "fields": [
+                  {
+                    "path": [
+                      "$.type[*]"
+                    ],
+                    "filter": {
+                      "type": "string",
+                      "pattern": "FarmerCredential"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "Farmer credential",
+          "purpose": "Verify the locally issued farmer credential",
+          "format": {
+            "ldp_vc": {
+              "proof_type": [
+                "Ed25519Signature2020"
+              ]
+            }
+          }
+        }
+      },
+      "response": {
+        "transactionId": "5af34750-c9a8-4cde-b63f-a1d561b409a0",
+        "requestId": "req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+        "expiresAt": 1793032914479,
+        "requestUri": "https://inji.127.0.0.1.sslip.io/v1/verify/vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d"
+      },
+      "id": "b756e11e-0cbb-4771-9995-67ec009d59fd",
+      "timestamp": "2026-10-26T16:36:54.508Z"
+    },
+    {
+      "source": "PROXY",
+      "title": "verify: /vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 10,
+      "request": null,
+      "response": "eyJraWQiOiJkaWQ6d2ViOmluamkuMTI3LjAuMC4xLnNzbGlwLmlvOnYxOnZlcmlmeSNrZXktMCIsInR5cCI6Im9hdXRoLWF1dGh6LXJlcStqd3QiLCJhbGciOiJFZERTQSJ9.eyJyZXNwb25zZV91cmkiOiJodHRwczovL2luamkuMTI3LjAuMC4xLnNzbGlwLmlvL3YxL3ZlcmlmeS92cC1zdWJtaXNzaW9uL2RpcmVjdC1wb3N0IiwiaXNzIjoiZGlkOndlYjppbmppLjEyNy4wLjAuMS5zc2xpcC5pbzp2MTp2ZXJpZnkiLCJyZXNwb25zZV90eXBlIjoidnBfdG9rZW4iLCJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSIsIm5hbWUiOiJGYXJtZXIgY3JlZGVudGlhbCIsInB1cnBvc2UiOiJWZXJpZnkgdGhlIGxvY2FsbHkgaXNzdWVkIGZhcm1lciBjcmVkZW50aWFsIiwiZm9ybWF0Ijp7ImxkcF92YyI6eyJwcm9vZl90eXBlIjpbIkVkMjU1MTlTaWduYXR1cmUyMDIwIl19fSwiaW5wdXRfZGVzY3JpcHRvcnMiOlt7ImlkIjoiZmFybWVyIiwiZm9ybWF0Ijp7ImxkcF92YyI6eyJwcm9vZl90eXBlIjpbIkVkMjU1MTlTaWduYXR1cmUyMDIwIl19fSwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQudHlwZVsqXSJdLCJmaWx0ZXIiOnsidHlwZSI6InN0cmluZyIsInBhdHRlcm4iOiJGYXJtZXJDcmVkZW50aWFsIn19XX19XX0sInN0YXRlIjoicmVxXzYzYmVkMTRmLWUwNTYtNGZjNy05M2Q0LTIzMTg1MmM4NWQ1ZCIsImlhdCI6MTc5MzAzMjYxNCwibm9uY2UiOiJ2SG8tc1NwZFFkcEtKTmNCaDhQaTJVZUJOS3BZNFBXNVZCMnloVl95Wk9nIiwiY2xpZW50X2lkIjoiZGlkOndlYjppbmppLjEyNy4wLjAuMS5zc2xpcC5pbzp2MTp2ZXJpZnkiLCJqdGkiOiIzMDc1MDAyMi0xOWFiLTQxZjYtYmY0Yi02OTc4OGQ3N2QyYjEiLCJjbGllbnRfbWV0YWRhdGEiOnsiY2xpZW50X25hbWUiOiJkaWQ6d2ViOmluamkuMTI3LjAuMC4xLnNzbGlwLmlvOnYxOnZlcmlmeSIsInZwX2Zvcm1hdHMiOnsibGRwX3ZwIjp7InByb29mX3R5cGUiOlsiRWQyNTUxOVNpZ25hdHVyZTIwMTgiLCJFZDI1NTE5U2lnbmF0dXJlMjAyMCIsIlJzYVNpZ25hdHVyZTIwMTgiXX0sInZjK3NkLWp3dCI6eyJzZC1qd3RfYWxnX3ZhbHVlcyI6WyJSUzI1NiIsIkVTMjU2IiwiRVMyNTZLIiwiRWREU0EiXSwia2Itand0X2FsZ192YWx1ZXMiOlsiUlMyNTYiLCJFUzI1NiIsIkVTMjU2SyIsIkVkRFNBIl19fX0sInJlc3BvbnNlX21vZGUiOiJkaXJlY3RfcG9zdCJ9.ljSP4e3PhXUwF6yQG9na0PHr7yWvrxVg3zhj3SitCWqd1wOOKdDEoRrVyw6q4rols_FuytRguoUuZcyO-FLcBg",
+      "id": "33f5984d-dbdb-4034-91c9-885eea11f673",
+      "timestamp": "2026-10-26T16:36:54.623Z"
+    },
+    {
+      "source": "WALLET",
+      "title": "Mimoto: POST /wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/presentations",
+      "method": "POST",
+      "endpoint": "http://mimoto-service:8099/v1/mimoto/wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/presentations",
+      "status": 200,
+      "durationMs": 173,
+      "request": {
+        "authorizationRequestUrl": "openid4vp://authorize?client_id=did%3Aweb%3Ainji.127.0.0.1.sslip.io%3Av1%3Averify&request_uri=https%3A%2F%2Finji.127.0.0.1.sslip.io%2Fv1%2Fverify%2Fvp-request%2Freq_63bed14f-e056-4fc7-93d4-231852c85d5d"
+      },
+      "response": {
+        "presentationId": "092f99e8-482b-438d-82c7-a30f39cb79f6",
+        "verifier": {
+          "id": "did:web:inji.127.0.0.1.sslip.io:v1:verify",
+          "name": "did:web:inji.127.0.0.1.sslip.io:v1:verify",
+          "logo": null,
+          "redirectUri": null,
+          "trusted": false,
+          "preregisteredWithWallet": true
+        }
+      },
+      "id": "dee5bd3c-dc4b-458c-9523-72778c501486",
+      "timestamp": "2026-10-26T16:36:54.713Z"
+    },
+    {
+      "source": "PROXY",
+      "title": "verify: /vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 10,
+      "request": null,
+      "response": "eyJraWQiOiJkaWQ6d2ViOmluamkuMTI3LjAuMC4xLnNzbGlwLmlvOnYxOnZlcmlmeSNrZXktMCIsInR5cCI6Im9hdXRoLWF1dGh6LXJlcStqd3QiLCJhbGciOiJFZERTQSJ9.eyJyZXNwb25zZV91cmkiOiJodHRwczovL2luamkuMTI3LjAuMC4xLnNzbGlwLmlvL3YxL3ZlcmlmeS92cC1zdWJtaXNzaW9uL2RpcmVjdC1wb3N0IiwiaXNzIjoiZGlkOndlYjppbmppLjEyNy4wLjAuMS5zc2xpcC5pbzp2MTp2ZXJpZnkiLCJyZXNwb25zZV90eXBlIjoidnBfdG9rZW4iLCJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSIsIm5hbWUiOiJGYXJtZXIgY3JlZGVudGlhbCIsInB1cnBvc2UiOiJWZXJpZnkgdGhlIGxvY2FsbHkgaXNzdWVkIGZhcm1lciBjcmVkZW50aWFsIiwiZm9ybWF0Ijp7ImxkcF92YyI6eyJwcm9vZl90eXBlIjpbIkVkMjU1MTlTaWduYXR1cmUyMDIwIl19fSwiaW5wdXRfZGVzY3JpcHRvcnMiOlt7ImlkIjoiZmFybWVyIiwiZm9ybWF0Ijp7ImxkcF92YyI6eyJwcm9vZl90eXBlIjpbIkVkMjU1MTlTaWduYXR1cmUyMDIwIl19fSwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQudHlwZVsqXSJdLCJmaWx0ZXIiOnsidHlwZSI6InN0cmluZyIsInBhdHRlcm4iOiJGYXJtZXJDcmVkZW50aWFsIn19XX19XX0sInN0YXRlIjoicmVxXzYzYmVkMTRmLWUwNTYtNGZjNy05M2Q0LTIzMTg1MmM4NWQ1ZCIsImlhdCI6MTc5MzAzMjYxNCwibm9uY2UiOiJ2SG8tc1NwZFFkcEtKTmNCaDhQaTJVZUJOS3BZNFBXNVZCMnloVl95Wk9nIiwiY2xpZW50X2lkIjoiZGlkOndlYjppbmppLjEyNy4wLjAuMS5zc2xpcC5pbzp2MTp2ZXJpZnkiLCJqdGkiOiI1YWNkYjU4NS0xZGJiLTRjODEtOGY0ZC0yZmEzZGQ5OTVlMWEiLCJjbGllbnRfbWV0YWRhdGEiOnsiY2xpZW50X25hbWUiOiJkaWQ6d2ViOmluamkuMTI3LjAuMC4xLnNzbGlwLmlvOnYxOnZlcmlmeSIsInZwX2Zvcm1hdHMiOnsibGRwX3ZwIjp7InByb29mX3R5cGUiOlsiRWQyNTUxOVNpZ25hdHVyZTIwMTgiLCJFZDI1NTE5U2lnbmF0dXJlMjAyMCIsIlJzYVNpZ25hdHVyZTIwMTgiXX0sInZjK3NkLWp3dCI6eyJzZC1qd3RfYWxnX3ZhbHVlcyI6WyJSUzI1NiIsIkVTMjU2IiwiRVMyNTZLIiwiRWREU0EiXSwia2Itand0X2FsZ192YWx1ZXMiOlsiUlMyNTYiLCJFUzI1NiIsIkVTMjU2SyIsIkVkRFNBIl19fX0sInJlc3BvbnNlX21vZGUiOiJkaXJlY3RfcG9zdCJ9.0d2oAuXzMZPrxjo6vlwpn3ksAK_FnwmPEP0IYCY0zA6mJW4tLPQTR-4wm1FDklGThfv6bV2K6d8YeZiddgM-Cg",
+      "id": "dc9f0d6e-7120-4c84-be79-bf84e645953b",
+      "timestamp": "2026-10-26T16:36:54.786Z"
+    },
+    {
+      "source": "WALLET",
+      "title": "Mimoto: GET /wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/presentations/092f99e8-482b-438d-82c7-a30f39cb79f6/credentials",
+      "method": "GET",
+      "endpoint": "http://mimoto-service:8099/v1/mimoto/wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/presentations/092f99e8-482b-438d-82c7-a30f39cb79f6/credentials",
+      "status": 200,
+      "durationMs": 471,
+      "request": null,
+      "response": {
+        "availableCredentials": [
+          {
+            "credentialId": "0d2bcd9f-8413-45c7-9fa4-b01a05dea834",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "c2456c9b-8e51-47a1-91da-19676d99d024",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "b2015d1c-ca4a-44f4-acb7-6916da799e49",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "06b5bf6b-4647-4323-878e-6f86ecc7352a",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "707cc363-17f1-4b9a-a916-63563f7ae4e2",
+            "credentialTypeDisplayName": "Farmer Credential (expired scenario)",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "e049b36e-1b95-4f11-bbf8-d87f00111674",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "97c80bfb-eeb3-4ac7-a6c6-f489c8e64058",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "3efb96ec-0c80-4551-b719-9cae17c3a548",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "6a3fcdea-4c38-487c-8d31-77574ce20cfa",
+            "credentialTypeDisplayName": "Farmer Credential (expired scenario)",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "edf24b8c-4f47-4cf3-bbdf-9969aaa35097",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "7959f7fd-3246-4253-9df1-b6e18f9d4945",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "ee7fb786-deb4-4765-b37b-41dce6ff8595",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "0b3d9700-3439-4b08-8fec-dcecbbb225f9",
+            "credentialTypeDisplayName": "Farmer Credential (expired scenario)",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "02f22584-7a01-4e0a-a823-a0e36040a4e9",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "6158d60e-331d-4ae0-8722-581a6b64175d",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "e734d2ff-2c2d-4f46-a628-805d65b037f5",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "1fc2cac1-2ca8-4588-9c5d-20ce5aaf190f",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "a64e53b0-98b3-4acf-b3ca-e809bae22875",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "ec4279c2-6441-4315-91ff-048f790b496c",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "15965243-75e4-487f-9335-6a8afa09b1cd",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "25c21a45-5ca6-4250-a5a3-ee0fc1b18560",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "f37943d2-75e8-43d1-bace-2a71e8d6981e",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "50fd4ab3-a56f-40f8-83de-37738272c046",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "6878630e-3f96-4fbd-81bc-1b6ae004c56e",
+            "credentialTypeDisplayName": "Farmer Credential (expired scenario)",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "7ea35e05-3a27-42cd-b53a-0f81fbc88f20",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "842c9388-0b40-4eba-b256-e03a252157af",
+            "credentialTypeDisplayName": "Farmer Credential (expired scenario)",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "dc7e0e3e-31c2-41a3-8caf-d6eb1f0d9f95",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "7a84c8dd-be05-41af-8498-41bf5ee31eb2",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "fbcc4468-c43a-486c-b84e-5cf7ff92055e",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "a0f20e88-8daa-4d4f-abac-3ab5f9e57cca",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "43beea10-6504-4f58-bca6-2135575100ac",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "ad85c9b7-863e-4b25-8ef0-bd9ee2959ed7",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          },
+          {
+            "credentialId": "bc295e73-9af7-4414-92c1-8b85128109c5",
+            "credentialTypeDisplayName": "Farmer Verifiable Credential",
+            "credentialTypeLogo": "https://mosip.github.io/inji-config/logos/agro-vertias-logo.png",
+            "format": "ldp_vc"
+          }
+        ],
+        "missingClaims": []
+      },
+      "id": "8391ca97-16f3-4b4d-9c32-501dc9a794c9",
+      "timestamp": "2026-10-26T16:36:55.186Z"
+    },
+    {
+      "source": "PROXY",
+      "title": "verify: /vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 15,
+      "request": null,
+      "response": "eyJraWQiOiJkaWQ6d2ViOmluamkuMTI3LjAuMC4xLnNzbGlwLmlvOnYxOnZlcmlmeSNrZXktMCIsInR5cCI6Im9hdXRoLWF1dGh6LXJlcStqd3QiLCJhbGciOiJFZERTQSJ9.eyJyZXNwb25zZV91cmkiOiJodHRwczovL2luamkuMTI3LjAuMC4xLnNzbGlwLmlvL3YxL3ZlcmlmeS92cC1zdWJtaXNzaW9uL2RpcmVjdC1wb3N0IiwiaXNzIjoiZGlkOndlYjppbmppLjEyNy4wLjAuMS5zc2xpcC5pbzp2MTp2ZXJpZnkiLCJyZXNwb25zZV90eXBlIjoidnBfdG9rZW4iLCJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSIsIm5hbWUiOiJGYXJtZXIgY3JlZGVudGlhbCIsInB1cnBvc2UiOiJWZXJpZnkgdGhlIGxvY2FsbHkgaXNzdWVkIGZhcm1lciBjcmVkZW50aWFsIiwiZm9ybWF0Ijp7ImxkcF92YyI6eyJwcm9vZl90eXBlIjpbIkVkMjU1MTlTaWduYXR1cmUyMDIwIl19fSwiaW5wdXRfZGVzY3JpcHRvcnMiOlt7ImlkIjoiZmFybWVyIiwiZm9ybWF0Ijp7ImxkcF92YyI6eyJwcm9vZl90eXBlIjpbIkVkMjU1MTlTaWduYXR1cmUyMDIwIl19fSwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQudHlwZVsqXSJdLCJmaWx0ZXIiOnsidHlwZSI6InN0cmluZyIsInBhdHRlcm4iOiJGYXJtZXJDcmVkZW50aWFsIn19XX19XX0sInN0YXRlIjoicmVxXzYzYmVkMTRmLWUwNTYtNGZjNy05M2Q0LTIzMTg1MmM4NWQ1ZCIsImlhdCI6MTc5MzAzMjYxNSwibm9uY2UiOiJ2SG8tc1NwZFFkcEtKTmNCaDhQaTJVZUJOS3BZNFBXNVZCMnloVl95Wk9nIiwiY2xpZW50X2lkIjoiZGlkOndlYjppbmppLjEyNy4wLjAuMS5zc2xpcC5pbzp2MTp2ZXJpZnkiLCJqdGkiOiIxZTc1NGViZi04Y2U0LTRjYTgtOGUwNi04MTU1NThkYTgxNmUiLCJjbGllbnRfbWV0YWRhdGEiOnsiY2xpZW50X25hbWUiOiJkaWQ6d2ViOmluamkuMTI3LjAuMC4xLnNzbGlwLmlvOnYxOnZlcmlmeSIsInZwX2Zvcm1hdHMiOnsibGRwX3ZwIjp7InByb29mX3R5cGUiOlsiRWQyNTUxOVNpZ25hdHVyZTIwMTgiLCJFZDI1NTE5U2lnbmF0dXJlMjAyMCIsIlJzYVNpZ25hdHVyZTIwMTgiXX0sInZjK3NkLWp3dCI6eyJzZC1qd3RfYWxnX3ZhbHVlcyI6WyJSUzI1NiIsIkVTMjU2IiwiRVMyNTZLIiwiRWREU0EiXSwia2Itand0X2FsZ192YWx1ZXMiOlsiUlMyNTYiLCJFUzI1NiIsIkVTMjU2SyIsIkVkRFNBIl19fX0sInJlc3BvbnNlX21vZGUiOiJkaXJlY3RfcG9zdCJ9.WI9pmqgql-qH_PxmXsvJZkgcVMK4mANfieK7dr2-TCagQbZwBQb04H51bZNU0Tk4TZkii20ksuvhZS4DTXJpDg",
+      "id": "2b629c4c-5a61-4811-85b5-20aaf9d13703",
+      "timestamp": "2026-10-26T16:36:55.313Z"
+    },
+    {
+      "source": "PROXY",
+      "title": "verify: /vp-submission/direct-post",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-submission/direct-post",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 45,
+      "request": {
+        "vp_token": "{\"@context\":[\"https://www.w3.org/2018/credentials/v1\",\"https://w3id.org/security/suites/jws-2020/v1\"],\"type\":[\"VerifiablePresentation\"],\"verifiableCredential\":[{\"issuanceDate\":\"2026-10-26T16:36:51.371Z\",\"credentialSubject\":{\"gender\":\"Not specified\",\"primaryCropType\":\"Maize\",\"mobileNumber\":\"0000000000\",\"postalCode\":\"000000\",\"landArea\":\"1 hectare (synthetic)\",\"fullName\":\"Synthetic Demo Farmer b55bd424\",\"secondaryCropType\":\"Rice\",\"dateOfBirth\":\"01-01-1990\",\"face\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAFCAYAAABW1IzHAAAAHklEQVQokWNgGPaAkZHxPyMj439sYrSQo51PBgsAALa0ECF30JSdAAAAAElFTkSuQmCC\",\"farmerID\":\"DEMO-b55bd424-05ca-3137-813d-cf725276a6a2\",\"villageOrTown\":\"Synthetic Village\",\"district\":\"Demo District\",\"id\":\"did:jwk:eyJrdHkiOiJFQyIsInVzZSI6InNpZyIsImNydiI6IlAtMjU2IiwieCI6IjljQ3B4Tkd0TFVLZ0FIV3F5Tzd0RVE4Mm02LXQzWEMxeWhJODJPX1AxSFEiLCJ5IjoiUHpQZTB0Y1NZaTduWEhpQWx6a1dGMjl1RUZMYkhSVjJ6cTdaTGdldldYdyIsImFsZyI6IkVTMjU2In0=\",\"state\":\"Demo State\",\"landOwnershipType\":\"Demo only\"},\"id\":\"https://mosip.io/credential/36d2d0db-3b07-4e86-a695-f436b6376151\",\"type\":[\"VerifiableCredential\",\"FarmerCredential\"],\"@context\":[\"https://www.w3.org/2018/credentials/v1\",\"https://inji.127.0.0.1.sslip.io/config/farmer.json\",\"https://w3id.org/security/suites/ed25519-2020/v1\"],\"issuer\":\"did:web:inji.127.0.0.1.sslip.io\",\"expirationDate\":\"2028-10-25T16:36:51.371Z\",\"proof\":{\"type\":\"Ed25519Signature2020\",\"created\":\"2026-10-26T16:36:51Z\",\"proofPurpose\":\"assertionMethod\",\"verificationMethod\":\"did:web:inji.127.0.0.1.sslip.io#kiPoAJSKvTI0Wg87qFSny2pl4TTYblqExC9EIOlmv2I\",\"proofValue\":\"z49Dr3GtPQt94fGYTWo5LPxtKqD6dBvr5L6ynxjGKbAXw5yM3oyiwz5XcQ3XDw76AEme9y3Jky3MHF5RMRHwACDrs\"}}],\"id\":\"urn:uuid:0bfb6114-9d52-4997-9606-aaea35aa5f42\",\"holder\":\"did:jwk:eyJrdHkiOiJPS1AiLCJ1c2UiOiJzaWciLCJjcnYiOiJFZDI1NTE5IiwieCI6Imp3X19zcVAxT0gtVmNWYzdHemgyanRUc1dMRkhaa1N1UlN6LXhscmdUUm8iLCJhbGciOiJFZDI1NTE5In0#0\",\"proof\":{\"type\":\"JsonWebSignature2020\",\"created\":\"2026-10-26T16:36:55Z\",\"challenge\":\"vHo-sSpdQdpKJNcBh8Pi2UeBNKpY4PW5VB2yhV_yZOg\",\"domain\":\"did:web:inji.127.0.0.1.sslip.io:v1:verify\",\"jws\":\"eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJFZERTQSJ9..zFsR2mSpK7NlT1etKjyevED5vGJlWaINZvel9xWk91uNGIBDapizLuoSxcJR8k1I3oGLVUY7BNkRynE7B3n9BQ\",\"proofPurpose\":\"authentication\",\"verificationMethod\":\"did:jwk:eyJrdHkiOiJPS1AiLCJ1c2UiOiJzaWciLCJjcnYiOiJFZDI1NTE5IiwieCI6Imp3X19zcVAxT0gtVmNWYzdHemgyanRUc1dMRkhaa1N1UlN6LXhscmdUUm8iLCJhbGciOiJFZDI1NTE5In0#0\"}}",
+        "presentation_submission": "{\"id\":\"urn:uuid:e27ab5c1-ba85-4ff8-a9ce-bd4684810509\",\"definition_id\":\"00000000-0000-4000-8000-000000000001\",\"descriptor_map\":[{\"id\":\"farmer\",\"format\":\"ldp_vp\",\"path\":\"$\",\"path_nested\":{\"id\":\"farmer\",\"format\":\"ldp_vc\",\"path\":\"$.verifiableCredential[0]\"}}]}",
+        "state": "req_63bed14f-e056-4fc7-93d4-231852c85d5d"
+      },
+      "response": {
+        "redirect_uri": "https://inji.127.0.0.1.sslip.io"
+      },
+      "id": "2792f92d-28d5-46c6-8d24-888caffbdde5",
+      "timestamp": "2026-10-26T16:36:56.937Z"
+    },
+    {
+      "source": "HTTP",
+      "title": "Presentation status",
+      "method": "GET",
+      "endpoint": "http://verify-service:8080/v1/verify/vp-request/req_63bed14f-e056-4fc7-93d4-231852c85d5d/status",
+      "status": 200,
+      "durationMs": 1328,
+      "request": null,
+      "response": {
+        "status": "VP_SUBMITTED"
+      },
+      "id": "094ee561-b840-402a-af49-4acba8820041",
+      "timestamp": "2026-10-26T16:36:56.939Z"
+    },
+    {
+      "source": "WALLET",
+      "title": "Mimoto: PATCH /wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/presentations/092f99e8-482b-438d-82c7-a30f39cb79f6",
+      "method": "PATCH",
+      "endpoint": "http://mimoto-service:8099/v1/mimoto/wallets/29aab5ce-758e-425b-8339-3cd4825ebaca/presentations/092f99e8-482b-438d-82c7-a30f39cb79f6",
+      "status": 200,
+      "durationMs": 1724,
+      "request": {
+        "selectedCredentials": [
+          "0d2bcd9f-8413-45c7-9fa4-b01a05dea834"
+        ]
+      },
+      "response": {
+        "status": "success",
+        "redirectUri": "https://inji.127.0.0.1.sslip.io",
+        "message": "Presentation successfully submitted"
+      },
+      "id": "1f3fbe08-77f1-4187-b312-321c7248ca58",
+      "timestamp": "2026-10-26T16:36:56.953Z"
+    },
+    {
+      "source": "HTTP",
+      "title": "Verification checks (Inji v2)",
+      "method": "POST",
+      "endpoint": "http://verify-service:8080/v1/verify/v2/vp-results/5af34750-c9a8-4cde-b63f-a1d561b409a0",
+      "status": 200,
+      "durationMs": 2498,
+      "request": {
+        "includeClaims": false,
+        "skipStatusChecks": false
+      },
+      "response": {
+        "transactionId": "5af34750-c9a8-4cde-b63f-a1d561b409a0",
+        "allChecksSuccessful": true,
+        "credentialResults": [
+          {
+            "allChecksSuccessful": true,
+            "schemaAndSignatureCheck": {
+              "valid": true,
+              "error": null
+            },
+            "expiryCheck": {
+              "valid": true
+            },
+            "statusCheck": [],
+            "claims": {},
+            "verifiableCredential": "{\"issuanceDate\":\"2026-10-26T16:36:51.371Z\",\"credentialSubject\":{\"gender\":\"Not specified\",\"primaryCropType\":\"Maize\",\"mobileNumber\":\"0000000000\",\"postalCode\":\"000000\",\"landArea\":\"1 hectare (synthetic)\",\"fullName\":\"Synthetic Demo Farmer b55bd424\",\"secondaryCropType\":\"Rice\",\"dateOfBirth\":\"01-01-1990\",\"face\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAFCAYAAABW1IzHAAAAHklEQVQokWNgGPaAkZHxPyMj439sYrSQo51PBgsAALa0ECF30JSdAAAAAElFTkSuQmCC\",\"farmerID\":\"DEMO-b55bd424-05ca-3137-813d-cf725276a6a2\",\"villageOrTown\":\"Synthetic Village\",\"district\":\"Demo District\",\"id\":\"did:jwk:eyJrdHkiOiJFQyIsInVzZSI6InNpZyIsImNydiI6IlAtMjU2IiwieCI6IjljQ3B4Tkd0TFVLZ0FIV3F5Tzd0RVE4Mm02LXQzWEMxeWhJODJPX1AxSFEiLCJ5IjoiUHpQZTB0Y1NZaTduWEhpQWx6a1dGMjl1RUZMYkhSVjJ6cTdaTGdldldYdyIsImFsZyI6IkVTMjU2In0=\",\"state\":\"Demo State\",\"landOwnershipType\":\"Demo only\"},\"id\":\"https://mosip.io/credential/36d2d0db-3b07-4e86-a695-f436b6376151\",\"proof\":{\"proofValue\":\"z49Dr3GtPQt94fGYTWo5LPxtKqD6dBvr5L6ynxjGKbAXw5yM3oyiwz5XcQ3XDw76AEme9y3Jky3MHF5RMRHwACDrs\",\"created\":\"2026-10-26T16:36:51Z\",\"proofPurpose\":\"assertionMethod\",\"type\":\"Ed25519Signature2020\",\"verificationMethod\":\"did:web:inji.127.0.0.1.sslip.io#kiPoAJSKvTI0Wg87qFSny2pl4TTYblqExC9EIOlmv2I\"},\"type\":[\"VerifiableCredential\",\"FarmerCredential\"],\"@context\":[\"https://www.w3.org/2018/credentials/v1\",\"https://inji.127.0.0.1.sslip.io/config/farmer.json\",\"https://w3id.org/security/suites/ed25519-2020/v1\"],\"issuer\":\"did:web:inji.127.0.0.1.sslip.io\",\"expirationDate\":\"2028-10-25T16:36:51.371Z\"}",
+            "holderProofCheck": {
+              "valid": true,
+              "error": null
+            }
+          }
+        ]
+      },
+      "id": "0947ba07-4c86-4413-858b-7ab8fda80887",
+      "timestamp": "2026-10-26T16:36:59.439Z"
+    }
+  ],
+  "issuedCredentialFacts": {
+    "format": "ldp_vc",
+    "types": [
+      "VerifiableCredential",
+      "FarmerCredential"
+    ],
+    "proof": "Ed25519Signature2020"
+  },
+  "holderReceiptSource": "MIMOTO",
+  "presentationExpectation": {
+    "nonce": "vHo-sSpdQdpKJNcBh8Pi2UeBNKpY4PW5VB2yhV_yZOg",
+    "definition": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "input_descriptors": [
+        {
+          "id": "farmer",
+          "format": {
+            "ldp_vc": {
+              "proof_type": [
+                "Ed25519Signature2020"
+              ]
+            }
+          },
+          "constraints": {
+            "fields": [
+              {
+                "path": [
+                  "$.type[*]"
+                ],
+                "filter": {
+                  "type": "string",
+                  "pattern": "FarmerCredential"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "name": "Farmer credential",
+      "purpose": "Verify the locally issued farmer credential",
+      "format": {
+        "ldp_vc": {
+          "proof_type": [
+            "Ed25519Signature2020"
+          ]
+        }
+      }
+    }
+  },
+  "requestId": "req_63bed14f-e056-4fc7-93d4-231852c85d5d",
+  "transactionId": "5af34750-c9a8-4cde-b63f-a1d561b409a0",
+  "presentationChecks": [
+    {
+      "id": "state",
+      "label": "Submission state matches this request",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "definition",
+      "label": "Presentation definition ID",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "nonce",
+      "label": "Presentation nonce",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "audience",
+      "label": "Presentation domain",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "holder-identity",
+      "label": "Presentation holder and proof purpose",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "issued-format",
+      "label": "Presentation uses the selected credential format",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "descriptor-id",
+      "label": "Descriptor ID matches the verifier request",
+      "source": "PLAYGROUND",
+      "status": "PASS",
+      "detail": "Requested farmer; received farmer."
+    },
+    {
+      "id": "descriptor-path",
+      "label": "Descriptor path and declared format",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "requested-format",
+      "label": "Verifier's requested format",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "requested-proof",
+      "label": "Verifier's requested proof suite / algorithm",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    },
+    {
+      "id": "requested-claims",
+      "label": "Requested credential type / claim constraints",
+      "source": "PLAYGROUND",
+      "status": "PASS"
+    }
+  ],
+  "submittedFingerprints": [
+    "82fd6a0dbece791ef64f6350fbdcd70a0a5f0d6aff628364499aa37dbf1b6f9f"
+  ],
+  "result": {
+    "transactionId": "5af34750-c9a8-4cde-b63f-a1d561b409a0",
+    "allChecksSuccessful": true,
+    "credentialResults": [
+      {
+        "allChecksSuccessful": true,
+        "schemaAndSignatureCheck": {
+          "valid": true,
+          "error": null
+        },
+        "expiryCheck": {
+          "valid": true
+        },
+        "statusCheck": [],
+        "claims": {},
+        "verifiableCredential": "{\"issuanceDate\":\"2026-10-26T16:36:51.371Z\",\"credentialSubject\":{\"gender\":\"Not specified\",\"primaryCropType\":\"Maize\",\"mobileNumber\":\"0000000000\",\"postalCode\":\"000000\",\"landArea\":\"1 hectare (synthetic)\",\"fullName\":\"Synthetic Demo Farmer b55bd424\",\"secondaryCropType\":\"Rice\",\"dateOfBirth\":\"01-01-1990\",\"face\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAFCAYAAABW1IzHAAAAHklEQVQokWNgGPaAkZHxPyMj439sYrSQo51PBgsAALa0ECF30JSdAAAAAElFTkSuQmCC\",\"farmerID\":\"DEMO-b55bd424-05ca-3137-813d-cf725276a6a2\",\"villageOrTown\":\"Synthetic Village\",\"district\":\"Demo District\",\"id\":\"did:jwk:eyJrdHkiOiJFQyIsInVzZSI6InNpZyIsImNydiI6IlAtMjU2IiwieCI6IjljQ3B4Tkd0TFVLZ0FIV3F5Tzd0RVE4Mm02LXQzWEMxeWhJODJPX1AxSFEiLCJ5IjoiUHpQZTB0Y1NZaTduWEhpQWx6a1dGMjl1RUZMYkhSVjJ6cTdaTGdldldYdyIsImFsZyI6IkVTMjU2In0=\",\"state\":\"Demo State\",\"landOwnershipType\":\"Demo only\"},\"id\":\"https://mosip.io/credential/36d2d0db-3b07-4e86-a695-f436b6376151\",\"proof\":{\"proofValue\":\"z49Dr3GtPQt94fGYTWo5LPxtKqD6dBvr5L6ynxjGKbAXw5yM3oyiwz5XcQ3XDw76AEme9y3Jky3MHF5RMRHwACDrs\",\"created\":\"2026-10-26T16:36:51Z\",\"proofPurpose\":\"assertionMethod\",\"type\":\"Ed25519Signature2020\",\"verificationMethod\":\"did:web:inji.127.0.0.1.sslip.io#kiPoAJSKvTI0Wg87qFSny2pl4TTYblqExC9EIOlmv2I\"},\"type\":[\"VerifiableCredential\",\"FarmerCredential\"],\"@context\":[\"https://www.w3.org/2018/credentials/v1\",\"https://inji.127.0.0.1.sslip.io/config/farmer.json\",\"https://w3id.org/security/suites/ed25519-2020/v1\"],\"issuer\":\"did:web:inji.127.0.0.1.sslip.io\",\"expirationDate\":\"2028-10-25T16:36:51.371Z\"}",
+        "holderProofCheck": {
+          "valid": true,
+          "error": null
+        }
+      }
+    ]
+  },
+  "verification": {
+    "version": 1,
+    "upstreamAccepted": true,
+    "checks": [
+      {
+        "id": "issuer-signature",
+        "label": "Credential schema and issuer signature",
+        "source": "INJI_VERIFY",
+        "status": "PASS"
+      },
+      {
+        "id": "expiry",
+        "label": "Credential expiry",
+        "source": "INJI_VERIFY",
+        "status": "PASS"
+      },
+      {
+        "id": "holder-proof",
+        "label": "Presentation holder proof",
+        "source": "INJI_VERIFY",
+        "status": "PASS"
+      },
+      {
+        "id": "credential-status",
+        "label": "Credential status",
+        "source": "INJI_VERIFY",
+        "status": "NOT_APPLICABLE",
+        "detail": "No credential status entry was checked; this is not evidence of revocation support."
+      },
+      {
+        "id": "state",
+        "label": "Submission state matches this request",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "definition",
+        "label": "Presentation definition ID",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "nonce",
+        "label": "Presentation nonce",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "audience",
+        "label": "Presentation domain",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "holder-identity",
+        "label": "Presentation holder and proof purpose",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "issued-format",
+        "label": "Presentation uses the selected credential format",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "descriptor-id",
+        "label": "Descriptor ID matches the verifier request",
+        "source": "PLAYGROUND",
+        "status": "PASS",
+        "detail": "Requested farmer; received farmer."
+      },
+      {
+        "id": "descriptor-path",
+        "label": "Descriptor path and declared format",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "requested-format",
+        "label": "Verifier's requested format",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "requested-proof",
+        "label": "Verifier's requested proof suite / algorithm",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "requested-claims",
+        "label": "Requested credential type / claim constraints",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      },
+      {
+        "id": "result-correlation",
+        "label": "Result matches the submitted credential",
+        "source": "PLAYGROUND",
+        "status": "PASS"
+      }
+    ]
+  },
+  "limitations": [
+    "Holder storage was confirmed by Mimoto's credential storage API.",
+    "Only traffic routed through the bridge and orchestrator is observable.",
+    "Issuer result matching does not establish full protocol conformance.",
+    "Inji verification results and independent playground request checks are reported separately. HTTP 200 is delivery, not acceptance.",
+    "Request checks cover the supported single-credential presentation shapes only. Missing or unsupported evidence cannot produce a pass."
+  ]
+}

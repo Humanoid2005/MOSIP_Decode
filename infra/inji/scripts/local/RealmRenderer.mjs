@@ -1,13 +1,13 @@
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { root, playgroundOrigin } from "../Configuration.mjs";
+import { secretsDirectory, playgroundOrigin } from "../Configuration.mjs";
 
 export class RealmRenderer {
   constructor(configuration) { this.config = configuration; }
   async render(output) {
     if (this.config.values.INJI_LOCAL_DEVELOPMENT !== "true") return;
     const { origin, values } = this.config;
-    const certificate = await readFile(resolve(root, "infra/inji/secrets/wallet-certificate.txt"), "utf8");
+    const certificate = await readFile(resolve(secretsDirectory, "wallet-certificate.txt"), "utf8");
     const credentialScope = (name) => ({
       name, protocol: "openid-connect",
       attributes: { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
@@ -16,16 +16,16 @@ export class RealmRenderer {
     // Certify requires the proof JWT issuer to equal the token's client_id claim, so each wallet client asserts its own ID.
     const clientIdMapper = (clientId) => [{ name: "credential-client", protocol: "openid-connect", protocolMapper: "oidc-hardcoded-claim-mapper", config: { "claim.name": "client_id", "claim.value": clientId, "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "false" } }];
     const realm = {
-      realm: "inji", enabled: true, sslRequired: "external", registrationAllowed: false,
+      realm: "inji", enabled: true, sslRequired: "external", registrationAllowed: true,
       clients: [
         {
           clientId: "inji-wallet", enabled: true, protocol: "openid-connect",
           publicClient: false, clientAuthenticatorType: "client-jwt",
           standardFlowEnabled: true, directAccessGrantsEnabled: false,
-          redirectUris: [origin + "/redirect", "io.mosip.residentapp.inji://oauthredirect"],
+          redirectUris: [origin + "/redirect", origin + "/playground/wallet-callback", "io.mosip.residentapp.inji://oauthredirect"],
           attributes: { "jwt.credential.certificate": certificate, "use.jwks.url": "false" },
-          defaultClientScopes: ["profile", "email", "basic", "mock_identity_vc_ldp"],
-          optionalClientScopes: ["mock_identity_vc_sd_jwt"],
+          defaultClientScopes: ["profile", "email", "basic"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
           protocolMappers: clientIdMapper("inji-wallet"),
         },
         {
@@ -34,7 +34,7 @@ export class RealmRenderer {
           redirectUris: [playgroundOrigin + "/api/v1/mock-wallet/callback"],
           attributes: { "pkce.code.challenge.method": "S256" },
           defaultClientScopes: ["profile", "email", "basic"],
-          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
           protocolMappers: clientIdMapper("playground-mock-wallet"),
         },
         {
@@ -52,6 +52,8 @@ export class RealmRenderer {
         { name: "profile", protocol: "openid-connect", protocolMappers: [{ name: "full name", protocol: "openid-connect", protocolMapper: "oidc-full-name-mapper", config: { "access.token.claim": "true", "id.token.claim": "true", "userinfo.token.claim": "true" } }] },
         credentialScope("mock_identity_vc_ldp"),
         credentialScope("mock_identity_vc_sd_jwt"),
+        credentialScope("mock_identity_vc_expired"),
+        credentialScope("mock_identity_vc_unsupported_did"),
       ],
       users: [{ id: "2154189532", username: "farmer", enabled: true, emailVerified: true, email: "farmer@example.test", firstName: "Gorge", lastName: "Cooper", credentials: [{ type: "password", value: values.LOCAL_FARMER_PASSWORD, temporary: false }] }],
     };

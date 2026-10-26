@@ -1,12 +1,15 @@
+import type { ScenarioService } from "../scenario-service/ScenarioService.js";
 import type { Request, Response } from "express";
 import type { EnvironmentService } from "../EnvironmentService.js";
 import type { ProxyCaptureService } from "./ProxyCaptureService.js";
+import { upstreamFailure } from "../telemetry/upstreamFailure.js";
 import { AppError } from "../errors.js";
 import { parsePayload, safeEndpoint } from "../telemetry/sanitize.js";
 export class ProtocolProxy {
   constructor(
     private readonly environment: EnvironmentService,
     private readonly capture: ProxyCaptureService,
+    private readonly scenarios: ScenarioService,
   ) {}
   async forward(req: Request, res: Response): Promise<void> {
     const match = /^\/(certify|verify|authorization)(\/[^?]*)?(\?.*)?$/.exec(
@@ -45,14 +48,22 @@ export class ProtocolProxy {
         422,
         "Upstream URL must not point back to the bridge.",
       );
-    const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
-    const request = parsePayload(body, req.headers["content-type"]);
+    let body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    let request = parsePayload(body, req.headers["content-type"]);
     const id = this.capture.identify(
       role,
       path,
       req.headers.authorization,
       request,
     );
+    body = await this.scenarios.bridgeBody(
+      id,
+      path,
+      body,
+      req.headers["content-type"] ?? "",
+    );
+    request = parsePayload(body, req.headers["content-type"]);
+    this.capture.observeSubmission(id, path, request);
     const headers: Record<string, string> = { "accept-encoding": "identity" };
     for (const name of ["content-type", "accept", "authorization"])
       if (typeof req.headers[name] === "string")
@@ -81,6 +92,11 @@ export class ProtocolProxy {
           chunks.push(part.value);
         }
       const bytes = Buffer.concat(chunks);
+      const responseBody = parsePayload(
+        bytes,
+        upstream.headers.get("content-type") || "",
+      );
+      const reason = upstreamFailure(responseBody);
       this.capture.capture(id, path, {
         source: "PROXY",
         title: `${role}: ${path}`,
@@ -89,11 +105,36 @@ export class ProtocolProxy {
         status: upstream.status,
         durationMs: Date.now() - started,
         request,
-        response: parsePayload(
-          bytes,
-          upstream.headers.get("content-type") || "",
-        ),
+        response: responseBody,
       });
+      if (
+        id &&
+        role === "verify" &&
+        path.startsWith("/vp-submission/") &&
+        upstream.status >= 400 &&
+        upstream.status < 500 &&
+        upstream.status !== 429
+      )
+        this.scenarios.fail(
+          id,
+          "SUBMISSION",
+          "SUBMISSION_REJECTED",
+          `Verifier submission endpoint returned HTTP ${upstream.status}${reason ? `: ${reason}` : ""}. Inspect the response; a credential verdict was not inferred.`,
+        );
+      if (
+        id &&
+        role === "certify" &&
+        path === "/credential" &&
+        upstream.status >= 400 &&
+        upstream.status < 500 &&
+        upstream.status !== 429
+      )
+        this.scenarios.fail(
+          id,
+          "ISSUANCE",
+          "ISSUER_REJECTED",
+          `Issuer credential endpoint returned HTTP ${upstream.status}${reason ? `: ${reason}` : ""}. Inspect the captured response.`,
+        );
       for (const name of [
         "content-type",
         "location",

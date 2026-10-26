@@ -32,6 +32,9 @@ services:
         condition: service_healthy
 
   certify:
+    image: inji-playground-certify:0.14.0-local
+    build:
+      context: ./infra/inji/certify
     environment:
       <<: *java-environment
     volumes:

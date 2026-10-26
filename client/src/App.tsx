@@ -5,6 +5,10 @@ import { ErrorBoundary } from "./components/layout/ErrorBoundary";
 import { WorkbenchPage } from "./pages/WorkbenchPage";
 import { InspectorPage } from "./pages/InspectorPage";
 import { HistoryPage } from "./pages/HistoryPage";
+import {
+  WalletCallbackPage,
+  WalletLoginReturn,
+} from "./pages/WalletCallbackPage";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false, refetchOnWindowFocus: false },
@@ -15,10 +19,16 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <BrowserRouter
+          basename={
+            location.pathname.startsWith("/playground") ? "/playground" : "/"
+          }
+        >
           <Routes>
             <Route element={<AppShell />}>
               <Route index element={<WorkbenchPage />} />
+              <Route path="wallet-callback" element={<WalletCallbackPage />} />
+              <Route path="login-return" element={<WalletLoginReturn />} />
               <Route path="inspector" element={<InspectorPage />} />
               <Route path="history" element={<HistoryPage />} />
               <Route

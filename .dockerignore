@@ -1,0 +1,6 @@
+.git
+**/node_modules
+**/dist
+**/.env
+infra/inji/secrets
+infra/inji/generated

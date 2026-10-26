@@ -24,7 +24,9 @@ export function ProtocolSummary({ run }: { run?: TestRun }) {
                 <span className="shrink-0 tabular-nums">
                   {event.source === "USER"
                     ? "Confirmed"
-                    : event.status || "Error"}
+                    : event.status
+                      ? `HTTP ${event.status}`
+                      : "Recorded"}
                 </span>
               </div>
             ))
@@ -43,8 +45,9 @@ export function ProtocolSummary({ run }: { run?: TestRun }) {
         </Link>
       </section>
       <p className="px-2 text-xs leading-5 text-slate-500">
-        Direct wallet traffic requires Inji to advertise the configured protocol
-        bridge. Signed payloads are never rewritten.
+        HTTP status shows delivery, not credential acceptance. Controlled
+        negative scenarios change a presentation copy; each change is shown in
+        the evidence.
       </p>
     </aside>
   );

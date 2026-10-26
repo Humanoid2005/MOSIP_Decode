@@ -38,6 +38,9 @@ export class AssetRenderer {
       },
       "certify-csvdp-farmer.properties": {
         "mosip.certify.data-provider-plugin.did-url": issuerDid,
+        ...(values.INJI_LOCAL_DEVELOPMENT === "true" ? {
+          "mosip.certify.integration.data-provider-plugin": "PlaygroundSyntheticFarmerProvider",
+        } : {}),
       },
       "mimoto-default.properties": {
         "mosip.kernel.xsdstorage-uri": "http://config-server/",
@@ -45,6 +48,9 @@ export class AssetRenderer {
         "mosipbox.public.url": origin,
         "mosip.esignet.host": values.AUTHORIZATION_ORIGIN,
         "mosip.inji.web.url": origin,
+        ...(values.INJI_LOCAL_DEVELOPMENT === "true" ? {
+          "mosip.inji.web.authentication.success.redirect.url": origin + "/playground/login-return",
+        } : {}),
         "mosip.security.origins": origin,
         keymanager_database_username: "postgres",
         "mosip.kernel.keymanager.hsm.config-path":
@@ -120,9 +126,9 @@ export class AssetRenderer {
       protocol: "OpenId4VCI",
       display: [
         {
-          name: "Agriculture Department",
+          name: values.INJI_LOCAL_DEVELOPMENT === "true" ? "Playground synthetic issuer" : "Agriculture Department",
           title: "Farmer Credential",
-          description: "Local Inji farmer credential",
+          description: "Synthetic farmer credential for local demonstration",
           language: "en",
           logo: { url: origin + "/config/farmer-logo.svg", alt_text: "Local farmer issuer" },
         },
@@ -177,6 +183,7 @@ export class AssetRenderer {
       INJI_VERIFY_URL: localOrigin + "/v1/verify",
       INJI_MIMOTO_URL: localOrigin + "/v1/mimoto",
       INJI_WEB_URL: origin,
+      INJI_EMBEDDED_WALLET_URL: values.INJI_LOCAL_DEVELOPMENT === "true" ? origin + "/playground" : "",
       INJI_AUTHORIZATION_URL: values.AUTHORIZATION_ISSUER_URL,
       INJI_VERIFIER_CLIENT_ID: verifierDid,
       INJI_PRESENTATION_DEFINITION_IDS: Object.entries(definitionIds)
@@ -196,6 +203,7 @@ export class AssetRenderer {
       Object.entries({ ...environment,
         INJI_CERTIFY_URL: "http://certify:8090/v1/certify/issuance",
         INJI_VERIFY_URL: "http://verify-service:8080/v1/verify",
+        INJI_MIMOTO_URL: "http://mimoto-service:8099/v1/mimoto",
         INJI_AUTHORIZATION_URL: "http://keycloak:8080/auth/realms/inji",
         HOST: "0.0.0.0", PORT: "8000", CLIENT_ORIGIN: playgroundOrigin,
         PUBLIC_BASE_URL: origin,

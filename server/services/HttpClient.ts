@@ -34,11 +34,12 @@ export class HttpClient implements HttpTransport {
         status: response.status,
         body,
         durationMs: Date.now() - started,
+        headers: response.headers,
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
-        502,
+        503,
         "Cannot reach the configured Inji service. Check its URL, TLS certificate and availability.",
       );
     }

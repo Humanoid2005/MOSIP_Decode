@@ -1,5 +1,6 @@
 import type { HttpTransport } from "../../models/contracts.js";
-import { AppError } from "../errors.js";
+import { upstreamFailure } from "./upstreamFailure.js";
+import { AppError, UpstreamError } from "../errors.js";
 import { safeEndpoint } from "./sanitize.js";
 import type { TelemetryService } from "./TelemetryService.js";
 export class ObservedHttpClient {
@@ -37,16 +38,16 @@ export class ObservedHttpClient {
           response: response.body,
         });
       if (response.status < 200 || response.status >= 300)
-        throw new AppError(
-          502,
-          `${title} failed with HTTP ${response.status}. See the protocol inspector.`,
+        throw new UpstreamError(
+          response.status,
+          `${title} failed with HTTP ${response.status}${upstreamFailure(response.body) ? `: ${upstreamFailure(response.body)}` : ""}. See the protocol inspector.`,
         );
       return response.body;
     } catch (error) {
       if (
         runId &&
         error instanceof AppError &&
-        !error.message.includes("HTTP ")
+        !(error instanceof UpstreamError)
       )
         this.telemetry.record(runId, {
           source: "HTTP",

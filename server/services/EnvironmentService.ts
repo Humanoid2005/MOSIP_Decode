@@ -17,6 +17,7 @@ export class EnvironmentService {
       "verifyUrl",
       "mimotoUrl",
       "webWalletUrl",
+      "embeddedWalletUrl",
       "authorizationUrl",
       "publicBaseUrl",
       "verifierClientId",

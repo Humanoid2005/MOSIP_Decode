@@ -59,3 +59,83 @@ Supporting the mock wallet moved the hard-coded `client_id` token claim from the
 The JSON-LD Farmer flow is validated end to end with Inji Web. The SD-JWT flow is validated end to end with the playground mock wallet and through issuance only with Inji Web. A physical Inji Mobile journey is not validated. Mobile requires reachable HTTPS and device trust. Local Keycloak is not eSignet. Optional MOSIP resident binding/WebSub integration is not provisioned. The agent's in-app browser does not trust the development CA; no browser security warning was bypassed. The user reported reaching the wallet login page in their own browser.
 
 Playground history is in memory and must be exported before server restart. No production deployment, automated test suite, CI pipeline or demo video is claimed.
+
+## Embedded Mimoto API journey — 26 October 2026
+
+The user requested the real wallet flow within the workbench. A new `INJI_MIMOTO` run used Mimoto's wallet APIs, retaining its session cookies, CSRF, key management, persistent storage and OpenID4VP implementation.
+
+Manual HTTP validation passed for run `4d19e663-7704-44d8-98f2-046d76153aff`: Keycloak login → dedicated synthetic wallet creation/unlock → PKCE authorization → Mimoto credential storage (HTTP 200 with stored credential ID) → automatic holder receipt → Verify request → Mimoto verifier authentication and credential matching → approved Mimoto presentation submission → Verify `vpResultStatus=SUCCESS`. The run was `COMPLETED`, `VALID`, with observed issuance and a matching fingerprint; report outcome was `PASS` and receipt source `MIMOTO`.
+
+The first run (`7e2f9996-9f8f-4a48-b026-0d8b0c5799fe`) stopped at matching because this older database still contained `^FarmerCredential$`. Existing migration 003 was applied and a fresh run passed. No data reset was used.
+
+This machine's Docker Desktop volumes required the previous workspace's matching configuration, selected with `INJI_CONFIG_HOME=/media/sriram-srikanth/New Volume/Mosip Challenge`. The checkout's shared `.env` and keys were not overwritten. Its existing runtime now has an additive workbench OAuth callback registration. The recovered environment currently advertises JSON-LD only.
+
+Server build, client lint and client build pass. Browser inventory was empty and creating an in-app browser returned `Browser is not available`; UI rendering and interactive browser navigation have not been checked. The API journey is genuine integration evidence, not browser acceptance or an automated test suite. Host trust settings were not changed.
+
+The final deployed images were validated again with the passing run above. The sanitized [exported report](evidence/mimoto-2026-10-26.json) preserves the evidence across server restarts. The dedicated temporary validation wallet was then removed; pre-existing wallets were preserved. Workbench routes and JS/CSS assets returned HTTP 200; missing-origin and missing-CSRF requests to the orchestration endpoint were rejected with HTTP 403.
+
+## Fresh direct Compose startup — 26 October 2026
+
+Following explicit user authorization, the old project Docker data and images were removed and application images rebuilt with `--no-cache --pull`. The new runtime uses this checkout's `.env` and keys, direct source Compose files, and a dedicated persistent Mimoto `wallet-keys` volume. The earlier runtime-volume and external configuration-home recovery notes are historical.
+
+Verified 12 running services, all configured health checks healthy, and successful completion of `wallet-keys-init`. The HTTPS workbench, API health and issuer metadata, Mimoto and Verify health, and Keycloak discovery returned HTTP 200 using the checkout CA. Fresh issuer metadata advertises both `FarmerCredential` (`ldp_vc`) and `FarmerCredentialSdJwt` (`vc+sd-jwt`). No complete credential journey was repeated after this reset; the preceding report remains evidence from the previous runtime. Mimoto's SD-JWT presentation limitation still applies.
+
+## Self-registration and synthetic registry — 26 October 2026
+
+A disposable account was created through Keycloak’s actual registration form (no admin-created account or seeded farmer login). Registration returned to `/playground/login-return`; authenticated Mimoto wallet creation/unlock succeeded. First issuance provisioned a persistent record named `Synthetic Demo Farmer …` with a `DEMO-…` farmer ID.
+
+Run `be7866e6-a8cd-42ba-aaa9-73e586db7736` completed with `VALID`, observed issuance, matched credential, `holderReceiptSource=MIMOTO` and report outcome `PASS`. The new credential travelled through Certify → Mimoto storage → approved Mimoto presentation → Inji Verify. See [sanitized evidence](evidence/signup-2026-10-26.json). Repeat issuance for the same account succeeded and left exactly one registry row.
+
+Client ESLint, TypeScript and Vite build and the Java provider build passed. HTTP validation used the checkout CA. Browser inventory was empty; this validates the actual registration/protocol APIs and served application build, not visual interaction.
+
+A second independently self-registered account also completed issuance and Mimoto storage. Docker Desktop then became unavailable (its socket disappeared and local HTTPS refused connections), preventing final disposable-data cleanup. Temporary accounts still requiring cleanup: `signup-demo-6460ba7874`, `signup-demo-b67925d73a`. Their wallets and synthetic issuer rows should be removed only by these exact identities after Docker returns; user-created accounts must be preserved. Do not infer the stack is currently running from the earlier PASS.
+
+## Negative scenarios — 26 October 2026
+
+Implemented and exercised the scenario controls against the current direct Compose runtime (Certify 0.14.0, Mimoto 0.21.0, Verify 0.17.0). These are manual real HTTP journeys using the existing synthetic demo account. See [scenario evidence](evidence/negative-scenarios-2026-10-26.json) for run IDs, expected outcomes, mutation details and actual responses.
+
+| Scenario | Embedded Mimoto / JSON-LD | Mock wallet / SD-JWT |
+| --- | --- | --- |
+| Normal | VALID; full end-to-end PASS | VALID; full end-to-end PASS |
+| Bad signature | INVALID; scenario PASS | INVALID; scenario PASS |
+| Modified claim | INVALID; scenario PASS | INVALID; scenario PASS |
+| Expired credential | EXPIRED; scenario PASS; presented fingerprint matches the signed expired fixture | Unavailable; JSON-LD fixture only |
+| Wrong credential type | Wallet matching rejection; scenario PASS | VALID; scenario FAIL (unexpected acceptance) |
+| Format mismatch | Wallet matching rejection; scenario PASS | VALID; scenario FAIL (unexpected acceptance) |
+| Proof mismatch | Wallet matching rejection; scenario PASS | VALID; scenario FAIL (unexpected acceptance) |
+| Unsupported DID | Certify issued a signed fixture; Mimoto storage returned HTTP 500 / internal_server_error; scenario INCONCLUSIVE | Unavailable; JSON-LD fixture only |
+| Wrong nonce | Unavailable; wallet controls its binding | VALID; scenario FAIL (unexpected acceptance) |
+| QR limit | 2202-byte local sample selected link fallback; policy scenario PASS | Same policy result |
+
+The mock intentionally submits the held SD-JWT despite incompatible request constraints. Its unexpected acceptances are observed behavior of this pinned stack, not a complete conformance/security assessment. Generic INVALID responses do not identify the precise failing cryptographic check. The unsupported-DID fixture sets both issuer and proof verificationMethod before signing; the generic wallet error does not prove a specific resolver rejection. QR results concern the workbench's 2000-byte policy, not physical scanner limits.
+
+Linked replay was verified from normal mock run `6b4c6751-eab3-486b-9885-db646b999747` to bad-signature run `d352e7b6-3a90-40cd-a3de-574bf4cb1d62`: new issuance and request, original parent retained, final INVALID with scenario PASS. Replay does not resend an old VP.
+
+During repeated issuance, an intermittent remote W3C JSON-LD context fetch failed inside Certify; the playground recorded an issuance error rather than a negative-scenario pass. Fresh normal JSON-LD and QR journeys subsequently passed. Existing credentials/keys were preserved; fixture configurations and optional scopes were added. The normal credential scope is now explicitly requested to avoid Certify stopping at an unrelated default scope.
+
+Server TypeScript build, client ESLint/TypeScript/Vite build, infrastructure syntax/rendering checks passed. Browser inventory was empty, so visual browser acceptance remains unverified. No automated test suite was added. The final playground images are running locally; history remains in memory.
+
+## Happy path, negative paths and error-display review — 26 October 2026
+
+The running Compose project is `/home/sriram-srikanth/Documents/MOSIP-Decode`; the older `Mosip Challenge` directory is not its source. This review preserved the existing uncommitted work, keys, database, accounts and wallet volumes. Completed in-memory reports were saved before app restarts. No automated test cases were added.
+
+### Corrections
+
+- Mimoto 0.21.0 used its storage UUID for `descriptor_map.id`. The local pinned-source correction now passes the authenticated input descriptor ID into OpenID4VP construction. It supports exactly one descriptor/credential and rejects ambiguous mappings before signing. The actual holder signature remains produced by Mimoto. See `infra/inji/mimoto/README.md`.
+- Negative signature/expiry outcomes require correlated results and intact request bindings. Unrelated failed protocol checks cannot be hidden by a generic INVALID result. `rejectionReasonConfirmed` now agrees with the scenario assessment.
+- Empty credential-status checks are NOT_APPLICABLE, rather than claiming revocation was checked. Missing status evidence still cannot produce a normal pass.
+- The inspector now displays the saved run error and detailed verification failures, defaults to a failed exchange or latest result, and describes scenario mutations accurately. Failed/missing checks remain visible; other checks are collapsed. HTTP success remains distinct from acceptance.
+- Non-JSON bridge error responses are retained within the existing bounded telemetry limits; structured upstream error codes/messages reach the run/UI. Malformed API errors no longer cause client TypeErrors. Wallet connection failures no longer all appear as PIN/unlock problems.
+- VerificationCoordinator polls on the backend, with delayed retries for transient failures. Errors persist on the run and clear after recovery. Submission evidence is captured before forwarding so result polling cannot outrun it; late response events remain observable. The UI no longer overwrites fresh run state with a cached status-query snapshot.
+
+### Manual validation
+
+The final image completed normal run `5af34750-c9a8-4cde-b63f-a1d561b409a0` with VALID/PASS and matching issuance, descriptor and presentation evidence. Linked fresh-issuance replay `e7e147ed-5c78-4b58-918b-0e4888b27760` corrupted only the presentation signature: Inji returned INVALID with `ERR_SIGNATURE_VERIFICATION_FAILED` on holder proof, the unchanged credential matched, other bindings passed, and the negative scenario passed with `rejectionReasonConfirmed=true`. Both completed without any client `/refresh` calls, proving unattended backend collection.
+
+The preceding manual review also exercised JSON-LD modified claim, signed expiry, type/format/proof mismatch matching rejection, and SD-JWT normal/bad-signature flows. These produced the expected outcomes. The ten captured reports were re-evaluated with the final outcome rules; classifications remained correct. See [scenario summary](evidence/review-scenarios-2026-10-26.json), [final happy-path report](evidence/review-happy-path-2026-10-26.json) and [final bad-signature report](evidence/review-bad-signature-2026-10-26.json).
+
+Server TypeScript, client ESLint/TypeScript/Vite and the pinned Java wallet build passed. Compose service health passed. Browser inspection at localhost verified history and the revised result UI. Real wallet operations were exercised through authenticated HTTP with the local CA; this does not claim a complete interactive HTTPS browser login journey or physical mobile coverage.
+
+### Remaining boundaries
+
+Pinned Inji Verify still accepts the diagnostic SD-JWT wrong-nonce submission (run `7640db4e-5966-4990-83a3-0703315c5cb5`). The playground's independent nonce check fails and the report is FAIL / Unexpected acceptance. Existing upstream format/type/proof acceptance gaps with the diagnostic holder are not reclassified as passes. The unsupported-DID fixture's generic wallet error remains inconclusive unless a precise rejection reason is observed. Earlier intermittent issuer HTTP 400 failures did not recur after the wallet rebuild; no definitive root cause is claimed for them. History remains in memory and the single active run is global to this local development workbench.

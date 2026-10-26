@@ -1,0 +1,11 @@
+# Local synthetic issuer records
+
+The local Compose override adds a separate `DataProviderPlugin` to the pinned Certify 0.14.0 image. Upstream signing, authorization-token validation, holder proof validation and credential templates remain in Certify. The plugin is selected only when `INJI_LOCAL_DEVELOPMENT=true`; the base setup retains the upstream CSV provider.
+
+`SyntheticFarmerDataProvider` takes the authenticated subject that Certify supplies after token validation. `SyntheticFarmerFactory` creates fictional farmer claims, visibly labelled `Synthetic Demo Farmer` and `DEMO-…`; it does not copy registration names, email addresses or any claimed real-world eligibility. `SyntheticFarmerDao` inserts one JSON record per subject in PostgreSQL using bound parameters and `ON CONFLICT DO NOTHING`, then returns the persisted record. Concurrent issuance and later sign-ins reuse the same row. Provisioning happens on first authorized issuance, not on registration alone.
+
+The source is a local demo registry, not an authoritative agriculture database. A real issuer must replace this provider with an eligible-record lookup; self-registration must not automatically confer real entitlement. The plugin serves the two configured Farmer credential formats. Adding other credential types also requires corresponding issuer data, templates and verifier definitions.
+
+Migration `006-synthetic-farmer-registry.sql` creates the table in `inji_certify`. Fresh seeds include it. For an existing local installation, prepare/build the updated images and run `node infra/inji/scripts/local/enable-registration.mjs` with PostgreSQL and Keycloak running before restarting Certify. This migration is additive and preserves existing wallets and accounts. Keep `postgres-data` to retain the records. Deleting a Keycloak account does not automatically delete its issuer record or revoke already issued credentials; account/credential lifecycle management is outside this local demo.
+
+The provider is compiled against the API and Spring libraries shipped in the pinned upstream image. `DataProviderPlugin.fetchData(Map)` and the original CSV provider were inspected from that image: the original CSV reader holds an in-memory map initialized from its file, which cannot serve newly registered subjects without a refresh. No upstream class is replaced.
