@@ -30,7 +30,7 @@ export class ProxyCaptureService {
         request && typeof request === "object"
           ? (request as Record<string, unknown>).state
           : undefined;
-      return state === active.requestId ||
+      return (active.requestId !== undefined && state === active.requestId) ||
         path.includes(encodeURIComponent(active.requestId || active.id))
         ? active.id
         : undefined;
