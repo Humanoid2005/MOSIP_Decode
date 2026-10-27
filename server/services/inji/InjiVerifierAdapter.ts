@@ -59,6 +59,8 @@ export class InjiVerifierAdapter implements VerifierAdapter {
         `${run.environment.verifyUrl}/vp-request/${encodeURIComponent(run.requestId!)}/status`,
         "Presentation status",
         run.id,
+        undefined,
+        { coalesce: true },
       ),
     );
     return requiredString(result.status, "status");

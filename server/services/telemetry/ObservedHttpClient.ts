@@ -13,6 +13,7 @@ export class ObservedHttpClient {
     title: string,
     runId?: string,
     request?: unknown,
+    options: { coalesce?: boolean } = {},
   ): Promise<unknown> {
     const method = request === undefined ? "GET" : "POST";
     try {
@@ -27,16 +28,20 @@ export class ObservedHttpClient {
         ...(request === undefined ? {} : { body: JSON.stringify(request) }),
       });
       if (runId)
-        this.telemetry.record(runId, {
-          source: "HTTP",
-          title,
-          method,
-          endpoint: safeEndpoint(url),
-          status: response.status,
-          durationMs: response.durationMs,
-          request: request ?? null,
-          response: response.body,
-        });
+        this.telemetry.record(
+          runId,
+          {
+            source: "HTTP",
+            title,
+            method,
+            endpoint: safeEndpoint(url),
+            status: response.status,
+            durationMs: response.durationMs,
+            request: request ?? null,
+            response: response.body,
+          },
+          options,
+        );
       if (response.status < 200 || response.status >= 300)
         throw new UpstreamError(
           response.status,

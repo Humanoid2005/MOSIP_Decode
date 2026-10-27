@@ -38,6 +38,7 @@ export interface ProtocolEvent {
   durationMs: number;
   request: unknown;
   response: unknown;
+  repeats?: number;
 }
 export interface TestRun {
   scenario: ScenarioId;
