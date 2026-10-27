@@ -82,7 +82,7 @@ Current interpretation:
 - Docker Compose and supporting configuration for the local Inji services are authorized and have been prepared.
 - The user subsequently explicitly requested that Docker, Inji and the app be started and integrated. Local startup and compatibility fixes are now authorized.
 - Do not treat preparation as authorization to provision a public endpoint, run a tunnel, or complete external account onboarding.
-- Production deployment, Jenkins and CI/CD remain outside the work done.
+- Production deployment, Jenkins and CD remain outside the work done. On 27 October 2026 the user authorized a CI workflow (`.github/workflows/ci.yml`) that only type-checks, tests, lints and builds.
 - Existing environment files must be preserved.
 - On 21 October 2026 the user explicitly chose to commit the root `.env` and `infra/inji/secrets/` to the private repository so teammates can clone and run with shared development secrets. Keep them tracked; do not commit `infra/inji/generated/`, which is machine-specific. They must be removed from history and regenerated before the repository is made public.
 - The playground client/server are now containerized for this authorized local setup.

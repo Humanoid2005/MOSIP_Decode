@@ -125,7 +125,7 @@ The helper only adds fixture configurations/scopes and changes the normal JSON-L
 
 Services receive their dependencies through constructors, keeping protocol implementations, storage and transport replaceable. React components remain functional. Feature groups exceeding three files use their own directories. No dependency-injection container or external-stack implementation is needed.
 
-History is intentionally in memory: up to 100 runs per server session. Service endpoints are loaded from project configuration at startup. Export reports before restart. Server unit tests live in `server/tests` and run with `npm test` (Node's built-in runner through `tsx`); they cover redaction, fingerprints, run storage, the mock wallet's request authentication and SD-JWT binding, bridge path rules and scenario scoring. Other checks are `npm run typecheck` / `npm run build` in `server` and `npm run lint` / `npm run build` in `client`. Frontend API mutations do not automatically retry.
+History is intentionally in memory: up to 100 runs per server session. Service endpoints are loaded from project configuration at startup. Export reports before restart. Server unit tests live in `server/tests` and run with `npm test` (Node's built-in runner through `tsx`); they cover redaction, fingerprints, run storage, the mock wallet's request authentication and SD-JWT binding, bridge path rules and scenario scoring. Other checks are `npm run typecheck` / `npm run build` in `server` and `npm run lint` / `npm run build` in `client`. GitHub Actions (`.github/workflows/ci.yml`) runs all of them on pushes to `main` and on pull requests, and the server Docker image build also runs the tests. Frontend API mutations do not automatically retry.
 
 ## Reference contracts
 
