@@ -7,3 +7,4 @@ infra/inji/generated/
 # The root .env and infra/inji/secrets/ are committed intentionally so the private team
 # shares one local development identity. Before making this repository public, remove
 # them from history and regenerate them with infra/inji/scripts/local/bootstrap.mjs.
+CLAUDE.md
