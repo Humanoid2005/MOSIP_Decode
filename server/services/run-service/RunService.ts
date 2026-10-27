@@ -174,10 +174,11 @@ export class RunService {
         if (latest.phase !== "ISSUING") return latest;
         latest.phase = "FAILED";
         latest.verdict = "ERROR";
+        if (!(error instanceof AppError)) console.error(error);
         latest.error =
-          error instanceof Error
+          error instanceof AppError
             ? error.message
-            : "Unable to initiate issuance.";
+            : "Unexpected server error while initiating issuance.";
         this.dao.save(latest);
       }
       this.telemetry.notify(run.id);
