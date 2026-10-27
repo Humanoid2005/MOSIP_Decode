@@ -1,5 +1,5 @@
 const secret =
-  /^(authorization|cookie|set-cookie|access_token|refresh_token|id_token|pre-authorized_code|code|code_verifier|client_assertion|client_secret|tx_code|pin|walletPin|confirmWalletPin|codeVerifier|password|x-xsrf-token)$/i;
+  /^(authorization|cookie|set-cookie|access_token|refresh_token|id_token|pre-authorized_code|code|code_verifier|client_assertion|client_secret|tx_code|pin|walletPin|confirmWalletPin|codeVerifier|accessToken|refreshToken|idToken|assertion|subject_token|actor_token|device_code|password|x-xsrf-token)$/i;
 export function sanitize(value: unknown, depth = 0): unknown {
   if (depth > 25) return "[depth limit]";
   if (Array.isArray(value))
