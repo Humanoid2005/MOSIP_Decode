@@ -11,7 +11,7 @@ The user explicitly asked to start Docker, make the Inji stack work, replace non
 
 The local stack and compatibility work are described in [infra/inji/README.md](infra/inji/README.md). Consult [context/LIVE_VALIDATION.md](context/LIVE_VALIDATION.md) for actual verified outcomes and remaining boundaries. Do not equate a running container, successful compilation or a captured issued credential with a completed wallet-to-verifier journey.
 
-The approved UI remains the React workbench, protocol inspector and run history. Connections was intentionally removed; do not restore it. Service configuration comes from files. No automated test cases, CI, public deployment or demo video have been added.
+The approved UI remains the React workbench, protocol inspector and run history. Connections was intentionally removed; do not restore it. Service configuration comes from files. Focused server unit tests were added on 27 October 2026 (see section 2.5). No public deployment or demo video has been added.
 
 ## 2. User requirements and strict working rules
 
@@ -62,6 +62,7 @@ These rules informed the run-service, telemetry, proxy-service, workbench, inspe
 > Keep your code design testable so that we can create test cases later. Do not create test cases right now, we will focus on that later.
 
 - Do not add automated test cases until the user changes this restriction.
+- On 27 October 2026 the user lifted this restriction. Server unit tests live in `server/tests` (`npm test`, Node test runner through `tsx`, no extra dependencies). Prefer pure logic and stubbed collaborators; tests must not need the running Inji stack.
 - Interfaces and dependency injection keep code testable.
 - Compilation, lint, browser inspection, syntax checks, schema validation, and temporary configuration-rendering checks were used.
 - Do not describe these checks as a completed automated test suite or live integration test.
