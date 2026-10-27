@@ -2,6 +2,7 @@ import { qrHandoff } from "../../../../server/models/scenarios";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Copy, ExternalLink, ScanLine } from "lucide-react";
+import { copyText } from "../../services/clipboard";
 export function WalletHandoff({
   uri,
   webUrl,
@@ -54,8 +55,7 @@ export function WalletHandoff({
               type="button"
               className="btn-secondary"
               onClick={() => {
-                navigator.clipboard
-                  .writeText(uri)
+                copyText(uri)
                   .then(() => setMessage("Wallet link copied."))
                   .catch(() =>
                     setMessage(
