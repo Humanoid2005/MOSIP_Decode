@@ -6,8 +6,9 @@ export class TelemetrySocket {
     server: Server,
     telemetry: TelemetryService,
     allowedOrigins: string[],
-  ): void {
+  ): () => void {
     const socket = new WebSocketServer({ noServer: true, maxPayload: 1024 });
+    const alive = new WeakSet<WebSocket>();
     server.on("upgrade", (request, connection, head) => {
       if (
         request.url !== "/api/v1/events" ||
@@ -18,10 +19,24 @@ export class TelemetrySocket {
         return;
       }
       socket.handleUpgrade(request, connection, head, (client) => {
+        alive.add(client);
+        client.on("pong", () => alive.add(client));
         client.on("error", () => client.terminate());
         client.send(JSON.stringify({ type: "connected" }));
       });
     });
+    // Pings keep idle proxies from closing the socket and reveal dead peers.
+    const heartbeat = setInterval(() => {
+      for (const client of socket.clients) {
+        if (!alive.has(client)) {
+          client.terminate();
+          continue;
+        }
+        alive.delete(client);
+        client.ping();
+      }
+    }, 30000);
+    heartbeat.unref();
     const send = (runId: string) => {
       for (const client of socket.clients)
         if (client.readyState === WebSocket.OPEN) {
@@ -30,10 +45,13 @@ export class TelemetrySocket {
         }
     };
     telemetry.changes.on("change", send);
-    server.on("close", () => {
+    const close = () => {
+      clearInterval(heartbeat);
       telemetry.changes.off("change", send);
       for (const client of socket.clients) client.terminate();
       socket.close();
-    });
+    };
+    server.once("close", close);
+    return close;
   }
 }

@@ -151,6 +151,10 @@ export function createApplication() {
   app.use(errors);
   const server = createServer(app);
   new VerificationCoordinator(dao, verification).attach(server);
-  new TelemetrySocket().attach(server, telemetry, origins);
-  return { app, server };
+  const closeSockets = new TelemetrySocket().attach(server, telemetry, origins);
+  const shutdown = () => {
+    closeSockets();
+    server.closeAllConnections();
+  };
+  return { app, server, shutdown };
 }
