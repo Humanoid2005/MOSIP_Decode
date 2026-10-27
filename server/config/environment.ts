@@ -13,15 +13,18 @@ const endpoint = (name: string) =>
 function definitionIds(value: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const entry of value.split(",")) {
-    const [format, id] = entry.split("=").map((part) => part.trim());
-    if (format && id) result[format] = id;
+    const separator = entry.indexOf("=");
+    const format = entry.slice(0, separator).trim();
+    const id = entry.slice(separator + 1).trim();
+    if (separator > 0 && format && id) result[format] = id;
   }
   return result;
 }
 export const settings = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 8000),
-  clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  clientOrigin: new URL(process.env.CLIENT_ORIGIN || "http://localhost:5173")
+    .origin,
   mockWalletClientId:
     process.env.MOCK_WALLET_CLIENT_ID || "playground-mock-wallet",
 };
