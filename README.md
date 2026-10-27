@@ -83,7 +83,7 @@ Credential validity and interoperability evidence are separate:
 
 JSON-LD comparison uses a deterministic structural fingerprint, not a new cryptographic verification algorithm. SD-JWT comparison uses the issuer-signed JWT so selective disclosure does not break identity matching. The inspector decodes JWTs for readability only. Inji Verify supplies the credential and presentation cryptographic results. The playground separately checks request bindings, supported constraints and SD-JWT key binding; it retains any upstream acceptance even when these independent checks fail.
 
-The current v1 adapter expects `requestId`, `transactionId`, and either `requestUri` or `authorizationDetails`, then a matching `transactionId`, `vpResultStatus` (`SUCCESS` / `FAILED`), and `vcResults[].verificationStatus` values `SUCCESS`, `INVALID`, or `EXPIRED`. An incompatible response fails explicitly. No claim of complete standards conformance is made from one successful run.
+The adapter creates requests through the v1 API and expects `requestId`, `transactionId`, and either `requestUri` or `authorizationDetails`. Results come from `/v2/vp-results/{transactionId}`, which must return the matching `transactionId`, a boolean `allChecksSuccessful`, and exactly one `credentialResults` entry with its signature, expiry, holder-proof and status checks. An incompatible or internally inconsistent response fails explicitly. No claim of complete standards conformance is made from one successful run.
 
 ## Negative scenarios and replay
 

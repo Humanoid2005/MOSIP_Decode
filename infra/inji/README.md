@@ -9,7 +9,7 @@ The local development setup runs the playground client/server, Inji Certify, Mim
 - Inji Web: https://inji.127.0.0.1.sslip.io
 - Playground API: http://localhost:8000/api/v1
 
-The hostname resolves to this computer. The local CA is `infra/inji/secrets/local-ca.crt`; trust that certificate in your browser if needed. If the wallet login/guest page already appears, there is no warning to accept there. Host trust settings are not modified by the setup scripts.
+The hostname resolves to this computer. The local CA is `infra/inji/secrets/local-ca.crt`. Accept the browser certificate warning instead of trusting it: its private key is committed and it can sign certificates for any domain. If the wallet login/guest page already appears, there is no warning to accept there. Host trust settings are not modified by the setup scripts.
 
 The Inji Web image retains its upstream Google login label. In this local configuration that button opens **local Keycloak**, not Google. Use the optional **Step 0 · Create account / Sign in** in the workbench. On Keycloak’s sign-in page, choose **Register** to create your own account. Already authenticated users skip this step automatically; other users can defer it until issuance. The seeded `farmer` account remains optional, with its password in `LOCAL_FARMER_PASSWORD` in the root `.env`. Create a wallet and remember its separate PIN. Guest mode does not provide the persistent wallet needed for the stored-credential presentation journey.
 
