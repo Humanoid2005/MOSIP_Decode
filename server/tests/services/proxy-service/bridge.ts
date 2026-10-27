@@ -22,7 +22,7 @@ export async function listen(handler: RequestListener) {
 
 export interface BridgeStubs {
   identify?: () => string | undefined;
-  capture?: () => void;
+  capture?: (...args: unknown[]) => void;
   bridgeBody?: (
     id: string | undefined,
     path: string,

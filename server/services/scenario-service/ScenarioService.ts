@@ -256,6 +256,26 @@ export class ScenarioService {
       !["BAD_SIGNATURE", "MODIFIED_CLAIM"].includes(run.scenario)
     )
       return body;
+    try {
+      return await this.mutateSubmission(run, body, contentType);
+    } catch (error) {
+      // The wallet will not resubmit, so record the cause instead of waiting
+      // for the request to expire.
+      const detail =
+        error instanceof AppError
+          ? error.message
+          : "The submitted presentation could not be parsed for mutation. No modified payload was submitted.";
+      this.fail(id, "SUBMISSION", "MUTATION_FAILED", detail);
+      throw error instanceof AppError ? error : new AppError(422, detail);
+    }
+  }
+
+  private async mutateSubmission(
+    run: TestRun,
+    body: Buffer,
+    contentType: string,
+  ): Promise<Buffer> {
+    const id = run.id;
     const form = contentType.includes("application/x-www-form-urlencoded");
     const payload = form
       ? Object.fromEntries(new URLSearchParams(body.toString()))
