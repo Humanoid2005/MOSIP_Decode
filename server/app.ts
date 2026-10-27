@@ -135,15 +135,17 @@ export function createApplication() {
     mimotoWalletRoutes(embeddedWallet, embeddedOrigin),
   );
   app.use((_req, _res, next) => next(new AppError(404, "Endpoint not found.")));
-  const errors: ErrorRequestHandler = (error, _req, res, _next) => {
+  const errors: ErrorRequestHandler = (error, _req, res, next) => {
+    if (res.headersSent) return next(error);
     const status =
       error instanceof AppError
         ? error.status
-        : error.type === "entity.too.large"
-          ? 413
+        : error.expose && Number.isInteger(error.status)
+          ? error.status
           : error instanceof SyntaxError
             ? 400
             : 500;
+    if (status === 500) console.error(error);
     res.status(status).json({
       error: status === 500 ? "Unexpected server error." : error.message,
     });
