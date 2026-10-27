@@ -69,3 +69,11 @@ export interface TestRun {
   submittedFingerprints?: string[];
   issuedCredentialFacts?: { format: string; types: string[]; proof: string };
 }
+export type RunSummary = Omit<
+  TestRun,
+  | "events"
+  | "result"
+  | "offerUri"
+  | "presentationUri"
+  | "credentialFingerprints"
+> & { eventCount: number };

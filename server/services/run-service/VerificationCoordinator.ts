@@ -14,8 +14,8 @@ export class VerificationCoordinator {
     let stopped = false;
     const poll = async () => {
       let delay = 3000;
-      const run = this.dao.all().find((item) => item.phase === "VERIFYING");
-      if (run) {
+      const run = this.dao.active();
+      if (run?.phase === "VERIFYING") {
         try {
           await this.verification.refresh(run.id);
         } catch (error) {

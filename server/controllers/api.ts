@@ -20,22 +20,7 @@ export function apiRoutes(deps: {
   router.get("/issuer", async (_req, res) =>
     res.json(await deps.issuer.discover(deps.environment.get())),
   );
-  router.get("/runs", (_req, res) =>
-    res.json(
-      deps.dao
-        .all()
-        .map(
-          ({
-            events,
-            result,
-            offerUri,
-            presentationUri,
-            credentialFingerprints,
-            ...run
-          }) => ({ ...run, eventCount: events.length }),
-        ),
-    ),
-  );
+  router.get("/runs", (_req, res) => res.json(deps.dao.summaries()));
   router.post("/runs", async (req, res) =>
     res.status(201).json(await deps.runs.start(req.body)),
   );

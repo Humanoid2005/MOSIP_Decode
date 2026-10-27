@@ -2,10 +2,12 @@ import type {
   CredentialConfiguration,
   Environment,
   JsonObject,
+  RunSummary,
   TestRun,
 } from "./dtos.js";
 export interface RunDao {
-  all(): TestRun[];
+  summaries(): RunSummary[];
+  active(): TestRun | undefined;
   get(id: string): TestRun;
   save(run: TestRun): void;
 }

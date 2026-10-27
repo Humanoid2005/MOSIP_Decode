@@ -22,9 +22,7 @@ export class RunService {
     private readonly offers: OfferService,
   ) {}
   active(): TestRun | undefined {
-    return this.dao
-      .all()
-      .find((run) => ["ISSUING", "HELD", "VERIFYING"].includes(run.phase));
+    return this.dao.active();
   }
   isBusy(): boolean {
     return this.starting || Boolean(this.active());
