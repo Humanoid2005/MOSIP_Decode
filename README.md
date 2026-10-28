@@ -14,7 +14,7 @@ node infra/inji/scripts/prepare.mjs
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait --wait-timeout 600
 ```
 
-The shared development `.env` and `infra/inji/secrets/` are committed for the private team, so a fresh clone needs only the commands above with Node.js 22 and Docker. Both frontend and backend are built and started by Compose. A new database and Keycloak realm are initialized automatically, including the embedded wallet callback. Do not run `bootstrap.mjs` on a clone; it refuses because `.env` exists. Use **Step 0 · Create account / Sign in** in the HTTPS workbench, then choose **Register** on Keycloak’s sign-in page. New accounts receive a persistent synthetic farmer record on first issuance. The optional seeded `farmer` login still uses `LOCAL_FARMER_PASSWORD` from `.env`. Accept the browser certificate warning instead of trusting `local-ca.crt` system-wide: its private key is shared.
+The shared development `.env` and `infra/inji/secrets/` are committed for the private team, so a fresh clone needs only the commands above with Node.js 22 and Docker. Rerun `prepare.mjs` after pulling: Compose reads rendered files such as `infra/inji/generated/origin.env`. Both frontend and backend are built and started by Compose. A new database and Keycloak realm are initialized automatically, including the embedded wallet callback. Do not run `bootstrap.mjs` on a clone; it refuses because `.env` exists. Use **Step 0 · Create account / Sign in** in the HTTPS workbench, then choose **Register** on Keycloak’s sign-in page. New accounts receive a persistent synthetic farmer record on first issuance. The optional seeded `farmer` login still uses `LOCAL_FARMER_PASSWORD` from `.env`. Accept the browser certificate warning instead of trusting `local-ca.crt` system-wide: its private key is shared.
 
 For legacy runtime-volume installations with older secrets, follow the preservation instructions in the local setup guide before changing configuration. On this workstation the user explicitly authorized a full reset; the new direct Compose setup now uses this checkout’s `.env` and keys. The previous workspace is no longer needed.
 
@@ -38,12 +38,12 @@ See [the implementation review](context/IMPLEMENTATION_REVIEW.md) for findings, 
 
 ## Inji Mobile on a phone
 
-A phone cannot reach `inji.127.0.0.1.sslip.io`, and Inji Mobile only trusts publicly issued TLS certificates. **Mobile mode** publishes the wallet-facing endpoints on a temporary `*.trycloudflare.com` HTTPS URL and moves the stack's identity there (issuer and verifier `did:web`, Keycloak issuer, Verify request URLs, Mimoto trust):
+A phone cannot reach `inji.127.0.0.1.sslip.io`, and Inji Mobile only trusts publicly issued TLS certificates. **Mobile mode** publishes the wallet-facing endpoints on a temporary `*.trycloudflare.com` HTTPS URL and moves the stack's identity there (issuer and verifier `did:web`, Certify's signing DID, Keycloak issuer, Verify request URLs):
 
 ```bash
 node infra/inji/scripts/local/mobile.mjs start      # about a minute; prints the URL and eight readiness checks
 node infra/inji/scripts/local/mobile.mjs rehearse   # optional: simulated Inji Mobile, end to end over the URL
-node infra/inji/scripts/local/mobile.mjs status     # rerun the readiness checks
+node infra/inji/scripts/local/mobile.mjs status     # rerun the readiness checks, or report a dropped tunnel
 node infra/inji/scripts/local/mobile.mjs stop       # restore the .env origin and remove the tunnel
 ```
 
@@ -53,8 +53,8 @@ Use **Inji Mobile 0.22.x** on Android, the release paired with Certify 0.14, Mim
 | --- | --- |
 | ![Inji Mobile selected with a phone-reachable issuer](context/screenshots/mobile-ready.png) | ![Warning when the issuer only resolves locally](context/screenshots/mobile-not-ready.png) |
 
-1. **Start issuance.** The workbench shows a credential offer naming only this issuer and the selected credential. In the app choose **Add card → Scan & Download Card** and scan it. The app signs in through Keycloak (register an account or use `farmer`) with its public `wallet` client and PKCE, then downloads the credential. Token and credential traffic passes through the protocol bridge and appears in the inspector. Select **I received the credential** once the card is in the app.
-2. **Request verification.** In the app tap **Scan**, scan the verifier QR and share the card. Inji Verify's result and the playground's independent checks appear as for any other wallet.
+1. **Start issuance.** The workbench shows a credential offer naming only this issuer and the selected credential. In the app choose **Add card → Scan & Download Card** and scan it, then choose **Yes, I Trust This Issuer** (the app asks once per tunnel URL). The app signs in through Keycloak (register an account or use `farmer`) with its public `wallet` client and PKCE, then downloads the credential. Token and credential traffic passes through the protocol bridge and appears in the inspector. Select **I received the credential** once the card is in the app.
+2. **Request verification.** In the app tap **Scan**, scan the verifier QR, choose **Yes, I Trust This Verifier**, and share the card. Inji Verify's result and the playground's independent checks appear as for any other wallet.
 
 | Issuance | Verification | Result |
 | --- | --- | --- |
@@ -62,9 +62,9 @@ Use **Inji Mobile 0.22.x** on Android, the release paired with Certify 0.14, Mim
 
 ![Inspector showing the offer, bridged token and credential exchanges](context/screenshots/mobile-inspector.png)
 
-Only the endpoints a phone wallet needs are public: issuer metadata and credential, DID documents, Keycloak's `inji` realm login and token, Mimoto, Verify's request and submission paths, and static configuration. The Keycloak admin console and `master` realm, the playground API and workbench, the bridge, Certify's offer creation and Verify's request creation answer 404 on the tunnel; `status` checks this. The URL is unguessable but not secret, so stop mobile mode when you are done.
+Only the endpoints a phone wallet needs are public: issuer metadata and credential, DID documents, Keycloak's `inji` realm login and token, Verify's request and submission paths, and static configuration. The Keycloak admin console and `master` realm, the playground API and workbench, the bridge, Mimoto, Certify's offer creation and Verify's request creation answer 404 on the tunnel; `status` checks this. A stock Inji Mobile keeps its built-in backend for its own settings, so it never calls this stack's Mimoto. The URL is unguessable but not secret, so stop mobile mode when you are done.
 
-Limits: each `start` gets a new URL, so credentials issued in an earlier session name an issuer DID that no longer resolves. The embedded wallet and Inji Web are unavailable while mobile mode is on. `rehearse` covers SD-JWT end to end and JSON-LD issuance plus verifier-request authentication; JSON-LD presentation needs the real app. iOS has not been tested. Use `start --origin https://…` with a stable tunnel of your own (for example an ngrok domain pointed at the gateway's `8088` listener) to keep the identity across sessions. Details are in [the local setup guide](infra/inji/README.md#inji-mobile-mode).
+Limits: a quick tunnel can drop after some hours, and its URL never comes back. `status` reports this; `start` then moves the stack to a new URL (it keeps a URL that still answers). Credentials issued on an earlier URL name an issuer DID that no longer resolves, so issue the card again. The embedded wallet and Inji Web are unavailable while mobile mode is on. `rehearse` covers SD-JWT end to end and JSON-LD issuance plus verifier-request authentication; JSON-LD presentation needs the real app. iOS has not been tested. Use `start --origin https://…` with a stable tunnel of your own (for example an ngrok domain pointed at the gateway's `8088` listener) to keep the identity across sessions. Details are in [the local setup guide](infra/inji/README.md#inji-mobile-mode).
 
 ## Use the workbench
 
