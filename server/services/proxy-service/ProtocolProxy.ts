@@ -5,11 +5,18 @@ import type { ProxyCaptureService } from "./ProxyCaptureService.js";
 import { upstreamFailure } from "../telemetry/upstreamFailure.js";
 import { AppError } from "../errors.js";
 import { parsePayload, safeEndpoint } from "../telemetry/sanitize.js";
-const retryableCredentialErrors = ["invalid_proof", "invalid_nonce"];
 function errorCode(body: unknown): string {
   return body && typeof body === "object" && !Array.isArray(body)
     ? String((body as Record<string, unknown>).error ?? "")
     : "";
+}
+// A wallet can only retry a rejected proof with a fresh c_nonce from the
+// issuer. Certify 0.14 sends none and has no nonce endpoint.
+function retryable(body: unknown): boolean {
+  return (
+    ["invalid_proof", "invalid_nonce"].includes(errorCode(body)) &&
+    typeof (body as Record<string, unknown>).c_nonce === "string"
+  );
 }
 export class ProtocolProxy {
   constructor(
@@ -154,8 +161,8 @@ export class ProtocolProxy {
     return Buffer.concat(chunks);
   }
 
-  // Fails the run on a definitive upstream rejection. Credential errors that
-  // OpenID4VCI wallets retry with a fresh c_nonce are left to the wallet.
+  // Fails the run on a definitive upstream rejection. Proof errors that come
+  // with a fresh c_nonce are left to the wallet to retry.
   private judge(
     id: string | undefined,
     role: string,
@@ -176,7 +183,7 @@ export class ProtocolProxy {
     if (
       role === "certify" &&
       path === "/credential" &&
-      !retryableCredentialErrors.includes(errorCode(body))
+      !retryable(body)
     )
       this.scenarios.fail(
         id,

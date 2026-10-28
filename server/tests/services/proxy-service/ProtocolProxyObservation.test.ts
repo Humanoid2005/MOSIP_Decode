@@ -15,10 +15,14 @@ before(async () => {
     req.on("data", (chunk: Buffer) => chunks.push(chunk));
     req.on("end", () => {
       const body = Buffer.concat(chunks).toString();
-      const error = body ? JSON.parse(body).error : undefined;
+      const { error, c_nonce } = body ? JSON.parse(body) : {};
       res.writeHead(error ? 400 : 200, { "content-type": "application/json" });
       res.end(
-        JSON.stringify(error ? { error, c_nonce: "fresh" } : { ok: true }),
+        JSON.stringify(
+          error
+            ? { error, ...(c_nonce ? { c_nonce: "fresh" } : {}) }
+            : { ok: true },
+        ),
       );
     });
   });
@@ -89,17 +93,31 @@ test("an unreachable upstream is a 502 recorded as a connection failure", async 
   }
 });
 
-for (const error of ["invalid_proof", "invalid_nonce"])
-  test(`leaves retryable ${error} credential errors to the wallet`, async () => {
+for (const error of ["invalid_proof", "invalid_nonce"]) {
+  test(`leaves ${error} with a fresh c_nonce to the wallet`, async () => {
     const failures: unknown[][] = [];
     const response = await send(
       "/certify/credential",
       { identify: () => "run-1", failures },
-      { error },
+      { error, c_nonce: true },
     );
     assert.equal(response.status, 400);
     assert.deepEqual(failures, []);
   });
+  test(`fails the run on ${error} without a c_nonce to retry with`, async () => {
+    const failures: unknown[][] = [];
+    await send(
+      "/certify/credential",
+      { identify: () => "run-1", failures },
+      { error },
+    );
+    assert.deepEqual(failures[0]!.slice(0, 3), [
+      "run-1",
+      "ISSUANCE",
+      "ISSUER_REJECTED",
+    ]);
+  });
+}
 
 test("fails the run on a definitive credential rejection", async () => {
   const failures: unknown[][] = [];
