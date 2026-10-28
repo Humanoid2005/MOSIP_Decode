@@ -62,7 +62,7 @@ export function RunStage({ run }: { run: TestRun }) {
                 deepLink={run.wallet !== "INJI_MOBILE"}
                 instruction={
                   run.wallet === "INJI_MOBILE"
-                    ? "In Inji Mobile, open Add card → Scan & Download Card and scan this code. Sign in, then confirm receipt here once the card appears."
+                    ? "In Inji Mobile, open Add card → Scan & Download Card, scan this code and trust the issuer. Sign in, then confirm receipt here once the card appears."
                     : undefined
                 }
                 webUrl={
@@ -112,7 +112,7 @@ export function RunStage({ run }: { run: TestRun }) {
                 uri={run.presentationUri}
                 instruction={
                   run.wallet === "INJI_MOBILE"
-                    ? "In Inji Mobile, tap Scan, scan this code and share the card."
+                    ? "In Inji Mobile, tap Scan, scan this code, trust the verifier and share the card."
                     : undefined
                 }
                 webPresentationUrl={
