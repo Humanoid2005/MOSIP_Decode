@@ -28,7 +28,12 @@ try {
     console.log("Mobile mode stopped; the stack uses the origin in .env again.");
   } else if (command === "status") {
     const state = await mode.status();
-    if (!state) console.log("Mobile mode is off.");
+    if (state.unfinished) {
+      console.log(
+        `The last mobile.mjs ${state.on ? "start" : "stop"} did not finish: Certify and Keycloak still use ${state.unfinished}. Run it again to complete the switch.`,
+      );
+      process.exitCode = 1;
+    } else if (!state.on) console.log("Mobile mode is off.");
     else if (!state.reachable) {
       console.log(
         `Mobile mode is on, but ${state.origin} is not reachable.` +

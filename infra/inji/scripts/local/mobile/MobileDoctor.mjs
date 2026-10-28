@@ -3,8 +3,9 @@ import { mobileClientId, mobileRedirectUri } from "../RealmRenderer.mjs";
 // Replays, over the public origin, the lookups Inji Mobile 0.22 makes before
 // and during issuance and presentation, and confirms local-only paths are closed.
 export class MobileDoctor {
-  constructor(configuration, request = fetch) {
+  constructor(configuration, request, signingDids) {
     this.config = configuration;
+    this.signingDids = signingDids;
     this.request = (url, init = {}) =>
       request(url, { redirect: "manual", signal: AbortSignal.timeout(15000), ...init });
   }
@@ -65,6 +66,14 @@ export class MobileDoctor {
       ["Issuer DID document", async () => {
         const document = await this.json(origin + "/.well-known/did.json");
         expect(document.id === issuerDid, `id is ${document.id}`);
+        return issuerDid;
+      }],
+      ["Certify signing DID", async () => {
+        // Certify signs with the DID stored in its database, not the one did.json serves.
+        const stale = (await this.signingDids()).filter(
+          (did) => did.startsWith("did:web:") && did !== issuerDid,
+        );
+        expect(!stale.length, `credentials still name ${[...new Set(stale)].join(", ")}`);
         return issuerDid;
       }],
       ["Verifier DID document", async () => {

@@ -1,11 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import {
   Configuration,
   generatedDirectory,
   mobileStateFile,
   readMobileState,
   root,
+  validateOrigin,
 } from "../../Configuration.mjs";
 import { AssetRenderer } from "../../AssetRenderer.mjs";
 import { DatabaseRenderer } from "../../DatabaseRenderer.mjs";
@@ -34,6 +36,9 @@ const credentialScopes = [
   "mock_identity_vc_unsupported_did",
 ];
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+// The origin last written to Certify's database and the realm. Switching always
+// starts from it, so rerunning start or stop after a failure finishes the move.
+const appliedFile = resolve(generatedDirectory, "mobile-applied.json");
 
 export class MobileMode {
   constructor(log = console.log) {
@@ -41,7 +46,8 @@ export class MobileMode {
   }
 
   async start(requestedOrigin) {
-    const previous = await Configuration.load();
+    if (requestedOrigin) validateOrigin("--origin", requestedOrigin);
+    this.requireStack();
     let origin = requestedOrigin;
     if (!origin) {
       // Keep a live tunnel so issued cards stay valid. A dropped quick tunnel never
@@ -60,45 +66,80 @@ export class MobileMode {
       mobileStateFile,
       JSON.stringify({ origin, tunnel: !requestedOrigin }, null, 2) + "\n",
     );
-    await this.switchIdentity(previous);
+    await this.switchIdentity();
     return { origin, checks: await this.doctor() };
   }
 
   async stop() {
-    const previous = await Configuration.load();
+    this.requireStack();
     await rm(mobileStateFile, { force: true });
-    await this.switchIdentity(previous);
+    await this.switchIdentity();
     this.compose("rm", "-sf", "tunnel");
   }
 
   async status() {
     const state = await readMobileState();
-    if (!state) return null;
+    const config = await Configuration.load();
+    const applied = await this.appliedOrigin(config);
+    if (applied !== config.origin) return { on: Boolean(state), unfinished: applied };
+    if (!state) return { on: false };
     const reachable = await this.reachable(state.origin);
-    return { ...state, reachable, checks: reachable ? await this.doctor() : [] };
+    return { on: true, ...state, reachable, checks: reachable ? await this.doctor() : [] };
   }
 
-  doctor() {
-    return Configuration.load().then((config) => new MobileDoctor(config).run());
+  async doctor() {
+    const config = await Configuration.load();
+    return new MobileDoctor(config, fetch, () => this.signingDids()).run();
   }
 
-  async switchIdentity(previous) {
+  appliedOrigin(config) {
+    return readFile(appliedFile, "utf8").then(
+      (text) => JSON.parse(text).origin,
+      () => config.baseOrigin,
+    );
+  }
+
+  async switchIdentity() {
     const next = await Configuration.load();
-    this.log(`Moving the stack identity from ${previous.origin} to ${next.origin}…`);
+    const from = await this.appliedOrigin(next);
+    this.log(`Moving the stack identity from ${from} to ${next.origin}…`);
     await new AssetRenderer(next).render(generatedDirectory);
     await new DatabaseRenderer(next).render(generatedDirectory);
     await new RealmRenderer(next).render(generatedDirectory);
     this.composeWithInput(
-      identitySql(previous.origin, next.origin),
+      identitySql(from, next.origin),
       "exec", "-T", "database", "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "inji_certify",
     );
-    this.updateRealm(previous, next);
+    this.updateRealm(from, next);
+    if (next.origin === next.baseOrigin) await rm(appliedFile, { force: true });
+    else await writeFile(appliedFile, JSON.stringify({ origin: next.origin }) + "\n");
     this.log("Restarting services that publish the origin (a few minutes)…");
     this.compose("up", "-d", "--force-recreate", "--wait", "--wait-timeout", "900", ...originServices);
   }
 
+  // kcadm and psql need both services up; failing here leaves nothing half moved.
+  requireStack() {
+    const services = this.compose("ps", "--format", "json", "database", "keycloak")
+      .split("\n")
+      .filter(Boolean)
+      .flatMap((line) => JSON.parse(line));
+    const healthy = (name) =>
+      services.some((item) => item.Service === name && item.Health === "healthy");
+    if (!healthy("database") || !healthy("keycloak"))
+      throw new Error(
+        "Start the stack and wait until it is healthy first: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --wait",
+      );
+  }
+
+  signingDids() {
+    return this.compose(
+      "exec", "-T", "database", "psql", "-U", "postgres", "-d", "inji_certify", "-At",
+      "-c", "select did_url from certify.credential_config",
+    ).split("\n").filter(Boolean);
+  }
+
   // Realm imports only run once, so existing clients and scopes are updated in place.
-  updateRealm(previous, next) {
+  updateRealm(fromOrigin, next) {
     const admin = (...args) =>
       this.compose("exec", "-T", "keycloak", "/opt/keycloak/bin/kcadm.sh", ...args);
     this.compose(
@@ -107,8 +148,8 @@ export class MobileMode {
     );
     const realm = (...args) => JSON.parse(admin("get", ...args, "-r", "inji"));
     const rebase = (uri) =>
-      uri === previous.origin || uri.startsWith(previous.origin + "/")
-        ? next.origin + uri.slice(previous.origin.length)
+      uri === fromOrigin || uri.startsWith(fromOrigin + "/")
+        ? next.origin + uri.slice(fromOrigin.length)
         : uri;
     for (const client of realm("clients", "--fields", "id,clientId,redirectUris")) {
       const redirectUris = (client.redirectUris ?? []).map(rebase);

@@ -40,8 +40,11 @@ function stack(overrides = {}) {
   };
 }
 
-const failures = async (request) =>
-  (await new MobileDoctor(config, request).run()).filter((check) => !check.ok);
+const signed = ["did:web:abc.trycloudflare.com", "did:playground:unresolvable-issuer"];
+const failures = async (request, dids = signed) =>
+  (await new MobileDoctor(config, request, async () => dids).run()).filter(
+    (check) => !check.ok,
+  );
 
 test("passes a correctly published stack", async () => {
   assert.deepEqual(await failures(stack()), []);
@@ -76,6 +79,15 @@ test("flags a stale DID left on the old origin", async () => {
     stack({ "/.well-known/did.json": { id: "did:web:inji.127.0.0.1.sslip.io" } }),
   );
   assert.equal(failure.name, "Issuer DID document");
+});
+
+test("flags credentials Certify still signs with the old DID", async () => {
+  const [failure] = await failures(stack(), [
+    "did:web:abc.trycloudflare.com",
+    "did:web:inji.127.0.0.1.sslip.io",
+  ]);
+  assert.equal(failure.name, "Certify signing DID");
+  assert.match(failure.detail, /inji\.127\.0\.0\.1\.sslip\.io/);
 });
 
 test("flags local-only paths that leak through the tunnel", async () => {
