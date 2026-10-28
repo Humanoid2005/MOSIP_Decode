@@ -26,9 +26,6 @@ function stack(overrides = {}) {
     "/.well-known/did.json": { id: "did:web:abc.trycloudflare.com" },
     "/v1/verify/did.json": { id: "did:web:abc.trycloudflare.com:v1:verify" },
     "/config/farmer.json": { "@context": {} },
-    "/v1/mimoto/verifiers": {
-      response: { verifiers: [{ client_id: "did:web:abc.trycloudflare.com:v1:verify" }] },
-    },
     ...overrides,
   };
   return async (url) => {

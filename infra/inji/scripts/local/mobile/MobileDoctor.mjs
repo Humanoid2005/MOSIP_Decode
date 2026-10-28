@@ -86,12 +86,6 @@ export class MobileDoctor {
         expect(context["@context"], "missing @context");
         return "reachable";
       }],
-      ["Wallet backend", async () => {
-        const verifiers = await this.json(origin + "/v1/mimoto/verifiers");
-        const listed = JSON.stringify(verifiers).includes(verifierDid);
-        expect(listed, "verifier DID is not in Mimoto's trusted verifiers");
-        return "trusted verifiers include this verifier";
-      }],
       ["Local-only paths closed", async () => {
         const open = [];
         for (const [path, method] of [
@@ -103,14 +97,16 @@ export class MobileDoctor {
           ["/v1/certify/pre-authorized-data", "POST"],
           ["/v1/verify/vp-request", "POST"],
           ["/v1/verify/vp-result/x", "GET"],
-          ["/v1/mimoto/playground/session", "GET"],
+          ["/v1/mimoto/issuers", "GET"],
+          ["/v1/mimoto/actuator", "GET"],
+          ["/auth/realms/inji/..;/master/", "GET"],
         ]) {
           const response = await this.request(origin + path, { method });
           await response.body?.cancel();
           if (response.status !== 404) open.push(`${method} ${path} → ${response.status}`);
         }
         expect(!open.length, open.join("; "));
-        return "admin, API, workbench and offer creation are not public";
+        return "admin, API, workbench, Mimoto and offer creation are not public";
       }],
     ];
   }
