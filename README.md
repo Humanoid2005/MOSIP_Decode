@@ -18,7 +18,7 @@ The shared development `.env` and `infra/inji/secrets/` are committed for the pr
 
 For legacy runtime-volume installations with older secrets, follow the preservation instructions in the local setup guide before changing configuration. On this workstation the user explicitly authorized a full reset; the new direct Compose setup now uses this checkout’s `.env` and keys. The previous workspace is no longer needed.
 
-Before the repository becomes public, remove `.env` and `infra/inji/secrets/` from history and run `node infra/inji/scripts/local/bootstrap.mjs` to create new private values. No public account or tunnel is required for the local Inji Web flow.
+Before the repository becomes public, remove `.env` and `infra/inji/secrets/` from history and run `node infra/inji/scripts/local/bootstrap.mjs` to create new private values. No public account or tunnel is required for the local Inji Web flow; Inji Mobile uses the optional mobile mode below.
 
 To run client/server outside Docker, use Node.js 22.19+ in the Node 22 line, install dependencies with `npm ci` in each directory, and run `npm run dev` in both. The server reads the generated endpoints; nonempty `INJI_*` environment settings override them. Set `NODE_EXTRA_CA_CERTS` to the absolute path of `infra/inji/secrets/local-ca.crt` when calling the local HTTPS origin. Configure endpoints through files; Connections remains intentionally removed. The direct Compose workflow uses bind mounts for configuration and named volumes for mutable data. The legacy runtime-volume synchronization script remains available for environments where bind mounts do not work.
 
@@ -35,6 +35,36 @@ node infra/inji/scripts/local/update-wallet-client.mjs
 Run it after Keycloak starts, using the same `INJI_CONFIG_HOME` as preparation when applicable. It adds only the workbench callback and preserves existing registrations. The normal Inji Web login still returns to its passcode page; a workbench login returns to the workbench.
 
 See [the implementation review](context/IMPLEMENTATION_REVIEW.md) for findings, fixed gaps and remaining work, and [live validation](context/LIVE_VALIDATION.md) for evidence and limits.
+
+## Inji Mobile on a phone
+
+A phone cannot reach `inji.127.0.0.1.sslip.io`, and Inji Mobile only trusts publicly issued TLS certificates. **Mobile mode** publishes the wallet-facing endpoints on a temporary `*.trycloudflare.com` HTTPS URL and moves the stack's identity there (issuer and verifier `did:web`, Keycloak issuer, Verify request URLs, Mimoto trust):
+
+```bash
+node infra/inji/scripts/local/mobile.mjs start      # about a minute; prints the URL and eight readiness checks
+node infra/inji/scripts/local/mobile.mjs rehearse   # optional: simulated Inji Mobile, end to end over the URL
+node infra/inji/scripts/local/mobile.mjs status     # rerun the readiness checks
+node infra/inji/scripts/local/mobile.mjs stop       # restore the .env origin and remove the tunnel
+```
+
+Use **Inji Mobile 0.22.x** on Android, the release paired with Certify 0.14, Mimoto 0.21 and Verify 0.17. Keep the workbench on this computer at http://localhost:5173 and choose **Inji Mobile**; the workbench confirms the phone-reachable origin.
+
+| | |
+| --- | --- |
+| ![Inji Mobile selected with a phone-reachable issuer](context/screenshots/mobile-ready.png) | ![Warning when the issuer only resolves locally](context/screenshots/mobile-not-ready.png) |
+
+1. **Start issuance.** The workbench shows a credential offer naming only this issuer and the selected credential. In the app choose **Add card → Scan & Download Card** and scan it. The app signs in through Keycloak (register an account or use `farmer`) with its public `wallet` client and PKCE, then downloads the credential. Token and credential traffic passes through the protocol bridge and appears in the inspector. Select **I received the credential** once the card is in the app.
+2. **Request verification.** In the app tap **Scan**, scan the verifier QR and share the card. Inji Verify's result and the playground's independent checks appear as for any other wallet.
+
+| Issuance | Verification | Result |
+| --- | --- | --- |
+| ![Offer QR for Inji Mobile](context/screenshots/mobile-issuance-qr.png) | ![Verifier QR for Inji Mobile](context/screenshots/mobile-verification-qr.png) | ![Completed Inji Mobile run](context/screenshots/mobile-result.png) |
+
+![Inspector showing the offer, bridged token and credential exchanges](context/screenshots/mobile-inspector.png)
+
+Only the endpoints a phone wallet needs are public: issuer metadata and credential, DID documents, Keycloak's `inji` realm login and token, Mimoto, Verify's request and submission paths, and static configuration. The Keycloak admin console and `master` realm, the playground API and workbench, the bridge, Certify's offer creation and Verify's request creation answer 404 on the tunnel; `status` checks this. The URL is unguessable but not secret, so stop mobile mode when you are done.
+
+Limits: each `start` gets a new URL, so credentials issued in an earlier session name an issuer DID that no longer resolves. The embedded wallet and Inji Web are unavailable while mobile mode is on. `rehearse` covers SD-JWT end to end and JSON-LD issuance plus verifier-request authentication; JSON-LD presentation needs the real app. iOS has not been tested. Use `start --origin https://…` with a stable tunnel of your own (for example an ngrok domain pointed at the gateway's `8088` listener) to keep the identity across sessions. Details are in [the local setup guide](infra/inji/README.md#inji-mobile-mode).
 
 ## Use the workbench
 
@@ -68,7 +98,7 @@ The BFF observes its own metadata / verifier API calls. It also provides a byte-
 
 Only GET and POST are forwarded. Request/response bodies are bounded at 5 MB. Authentication tokens are redacted from captured structured data. Each recorded payload is limited to 32 KB and marked when truncated; the last 300 events are retained per run. The normal flow forwards payloads unchanged. An explicitly selected signature/claim scenario mutates a presentation copy at the controlled wallet or bridge boundary and records the change. Callback URLs and redirect locations are not rewritten.
 
-For full visibility, the connected Inji environment must already advertise bridge URLs in its metadata and callback configuration, preserving the canonical issuer and verifier trust identities. `PUBLIC_BASE_URL` displays the expected prefix; setting it alone does **not** reconfigure Inji or create network connectivity. The public URL must be reachable by the wallet. The local Compose gateway wires these routes through the bridge; no tunnel is provisioned.
+For full visibility, the connected Inji environment must already advertise bridge URLs in its metadata and callback configuration, preserving the canonical issuer and verifier trust identities. `PUBLIC_BASE_URL` displays the expected prefix; setting it alone does **not** reconfigure Inji or create network connectivity. The public URL must be reachable by the wallet. The local Compose gateway wires these routes through the bridge. Mobile mode publishes them on a phone-reachable tunnel; see [Inji Mobile on a phone](#inji-mobile-on-a-phone).
 
 Use a dedicated development environment with one active run at a time. Token exchanges seen during that issuance session establish token-to-run correlation; `/credential` responses are associated only with a token observed by the bridge. Direct token exchanges, traffic from other wallets, encrypted payloads, and paths outside the allowlist are not fully observable. Mimoto owns the wallet login, encrypted credential storage and presentation flow.
 
@@ -125,7 +155,7 @@ The helper only adds fixture configurations/scopes and changes the normal JSON-L
 
 Services receive their dependencies through constructors, keeping protocol implementations, storage and transport replaceable. React components remain functional. Feature groups exceeding three files use their own directories. No dependency-injection container or external-stack implementation is needed.
 
-History is intentionally in memory: up to 100 runs per server session. Service endpoints are loaded from project configuration at startup. Export reports before restart. Server unit tests live in `server/tests` and run with `npm test` (Node's built-in runner through `tsx`); they cover redaction, fingerprints, run storage, the mock wallet's request authentication and SD-JWT binding, bridge path rules and scenario scoring. Other checks are `npm run typecheck` / `npm run build` in `server` and `npm run lint` / `npm run build` in `client`. GitHub Actions (`.github/workflows/ci.yml`) runs all of them on pushes to `main` and on pull requests, and the server Docker image build also runs the tests. Frontend API mutations do not automatically retry.
+History is intentionally in memory: up to 100 runs per server session. Service endpoints are loaded from project configuration at startup. Export reports before restart. Server unit tests live in `server/tests` and run with `npm test` (Node's built-in runner through `tsx`); they cover redaction, fingerprints, run storage, the mock wallet's request authentication and SD-JWT binding, bridge path rules and scenario scoring. Infrastructure script tests (configuration rendering, mobile mode) run with `node --test "infra/inji/scripts/tests/*.test.mjs"`. Other checks are `npm run typecheck` / `npm run build` in `server` and `npm run lint` / `npm run build` in `client`. GitHub Actions (`.github/workflows/ci.yml`) runs all of them on pushes to `main` and on pull requests, and the server Docker image build also runs the tests. Frontend API mutations do not automatically retry.
 
 ## Reference contracts
 

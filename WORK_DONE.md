@@ -82,6 +82,7 @@ Current interpretation:
 - Docker Compose and supporting configuration for the local Inji services are authorized and have been prepared.
 - The user subsequently explicitly requested that Docker, Inji and the app be started and integrated. Local startup and compatibility fixes are now authorized.
 - Do not treat preparation as authorization to provision a public endpoint, run a tunnel, or complete external account onboarding.
+- On 28 October 2026 the user authorized Inji Mobile support: a Cloudflare quick tunnel exposing only the allowlisted wallet endpoints during mobile sessions, with the workbench kept on localhost, and a larger Colima VM (6 CPU / 12 GiB). Mobile mode is opt-in (`infra/inji/scripts/local/mobile.mjs`); no external account is used.
 - Production deployment, Jenkins and CD remain outside the work done. On 27 October 2026 the user authorized a CI workflow (`.github/workflows/ci.yml`) that only type-checks, tests, lints and builds.
 - Existing environment files must be preserved.
 - On 21 October 2026 the user explicitly chose to commit the root `.env` and `infra/inji/secrets/` to the private repository so teammates can clone and run with shared development secrets. Keep them tracked; do not commit `infra/inji/generated/`, which is machine-specific. They must be removed from history and regenerated before the repository is made public.

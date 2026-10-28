@@ -109,11 +109,28 @@ Stopping with `docker compose -f docker-compose.yml -f docker-compose.local.yml 
 
 ## Scope and limitations
 
-The configured journey is the JSON-LD Farmer credential using Inji Web. The repository includes SD-JWT issuer/Verify migrations, but Mimoto 0.21 cannot present SD-JWT. Use the separate mock wallet for that format once those migrations and Keycloak scopes are configured. Inji Mobile is not a container, and a physical phone cannot reach this loopback hostname; mobile use needs a reachable HTTPS deployment and device trust. No tunnel is created.
+The configured journey is the JSON-LD Farmer credential using Inji Web. The repository includes SD-JWT issuer/Verify migrations, but Mimoto 0.21 cannot present SD-JWT. Use the separate mock wallet for that format once those migrations and Keycloak scopes are configured. Inji Mobile is not a container, and a physical phone cannot reach this loopback hostname; use [mobile mode](#inji-mobile-mode) for a phone.
 
 Local Keycloak supplies real OAuth/OIDC authentication and credential-bound nonces. It is not an eSignet deployment. MOSIP resident wallet binding and WebSub integrations are outside this standalone farmer setup; the upstream Mimoto scheduler can log an unavailable WebSub endpoint. DataShare uses the official local `encryptionType=NONE` policy, so this environment is for synthetic development credentials.
 
 The base `docker-compose.yml` remains available for a separately onboarded external authorization provider. The working local setup additionally requires `docker-compose.local.yml`, passed explicitly with the second `-f` option. Do not run only the base file expecting the local authorization service or playground containers.
+
+## Inji Mobile mode
+
+`node infra/inji/scripts/local/mobile.mjs start` makes the running stack usable from a phone. It changes generated configuration and live service state only; `.env` and the secrets stay as committed.
+
+1. Starts the `tunnel` service (Compose profile `mobile`, `cloudflare/cloudflared` quick tunnel, no account) pointed at the gateway's internal `8088` listener, and reads the assigned `https://*.trycloudflare.com` URL from its log. `--origin https://…` uses a stable URL you run yourself instead.
+2. Writes `infra/inji/generated/mobile.json`. `Configuration.load()` then moves every `.env` value derived from `INJI_PUBLIC_ORIGIN` to the new origin, so all renderers and helper scripts see one consistent identity.
+3. Re-renders configuration. `origin.env` now carries the origin into Compose for Keycloak (`KC_HOSTNAME`), Verify (`INJI_VP_SUBMISSION_BASE_URL`, `INJI_VERIFY_REDIRECT_URI`) and Inji Web (`MIMOTO_URL`).
+4. Rewrites the issuer DID and JSON-LD context URL that Certify stored in `certify.credential_config` when its database was created (the unresolvable-DID fixture is untouched).
+5. Updates the existing realm in place: origin-based redirect URIs, the credential scopes' audience, and the public PKCE client `wallet` with redirect `io.mosip.residentapp.inji://oauthredirect` that Inji Mobile 0.22 uses for offers. Its default scopes include `basic`, because Certify rejects tokens without `sub`. New realms get the same client from `RealmRenderer.mjs`.
+6. Recreates the services that publish the origin, then runs the readiness checks over the public URL.
+
+Services inside Compose reach the public origin through the tunnel (for example Certify fetching Keycloak keys), so the computer needs internet access while mobile mode is on. `stop` reverses steps 2–6 and removes the tunnel.
+
+The `8088` listener in `config/gateway.local.conf` is an allowlist: issuer metadata and `/credential` (through the bridge), `/.well-known/did.json`, `/v1/verify/did.json`, `/auth/realms/inji/` and `/auth/resources/`, the Keycloak token endpoint (through the bridge), `/v1/mimoto/` except the playground and actuator paths, Verify's `vp-request/{id}` and `vp-submission/` (through the bridge) and `/config/`. Everything else returns 404.
+
+`status` replays Inji Mobile's lookups over the public URL: issuer metadata with a single authorization server, discovery with an exact `issuer` match, the `wallet` client's login page, both DID documents, the JSON-LD context, Mimoto's trusted verifiers, and closed local-only paths. `rehearse [--format vc+sd-jwt|ldp_vc]` drives a real workbench run with `local/mobile/InjiMobileSimulator.mjs`, which reproduces the wallet's offer parsing, discovery, client, proof and request shapes and did:web request authentication. Unit tests are in `scripts/tests` (`node --test "infra/inji/scripts/tests/*.test.mjs"`).
 
 ## Sources
 

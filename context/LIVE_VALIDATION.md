@@ -139,3 +139,27 @@ Server TypeScript, client ESLint/TypeScript/Vite and the pinned Java wallet buil
 ### Remaining boundaries
 
 Pinned Inji Verify still accepts the diagnostic SD-JWT wrong-nonce submission (run `7640db4e-5966-4990-83a3-0703315c5cb5`). The playground's independent nonce check fails and the report is FAIL / Unexpected acceptance. Existing upstream format/type/proof acceptance gaps with the diagnostic holder are not reclassified as passes. The unsupported-DID fixture's generic wallet error remains inconclusive unless a precise rejection reason is observed. Earlier intermittent issuer HTTP 400 failures did not recur after the wallet rebuild; no definitive root cause is claimed for them. History remains in memory and the single active run is global to this local development workbench.
+
+## Inji Mobile mode — 28 October 2026
+
+Validated on macOS (Apple silicon) with Colima 6 CPU / 12 GiB, a freshly created stack, Certify 0.14.0, Mimoto 0.21.0 and Verify 0.17.0, and two real Cloudflare quick tunnels. The Inji Mobile 0.22.1 behaviour reproduced by the simulator was taken from the wallet, `inji-vci-client` 0.7.0 and `inji-openid4vp` 0.7.0 sources; Certify's proof validator at v0.14.0 accepts the wallet's proof without `iss`.
+
+| Check | Result |
+| --- | --- |
+| Baseline stack before changes | All services healthy; Certify advertises one authorization server (the Keycloak realm) |
+| `mobile.mjs start`, first tunnel | 8/8 readiness checks over the public URL after one fix (below); about one minute |
+| Rehearsal, SD-JWT (`c2cd5bf1`) | Offer scanned, Keycloak sign-in with client `wallet`, credential through the bridge, did:web-authenticated request, Verify VALID, outcome PASS |
+| Rehearsal, JSON-LD (`699ab96f`) | Credential issued (context fetched back through the tunnel) and correlated; verifier request authenticated |
+| `start` again on the same tunnel | Idempotent, 8/8 checks |
+| `stop` | Issuer, authorization server, verifier DID, database DIDs, embedded wallet and Inji Web restored; tunnel removed |
+| Rehearsal on the restored local origin (`a4f6cb60`) | VALID / PASS |
+| `start` on a new tunnel | Identity moved from the local origin to the new URL; 8/8 checks; SD-JWT `7222d585` PASS; JSON-LD `42d3751f` issued and request authenticated |
+| Workbench through Playwright (`f54591a4`) | Offer QR, verifier QR, PASS result and inspector captured in `context/screenshots/`; report in [evidence](evidence/mobile-sd-jwt-2026-10-28.json) |
+
+Found and fixed during validation:
+
+- The `wallet` client registered in an existing realm lacked the realm's `basic` scope, so tokens had no `sub` and Certify returned `invalid_token` ("The sub claim is not valid"). Mobile mode now assigns default and credential scopes on every start.
+- The public listener answered `POST /v1/verify/vp-request` with a 301 to a bridged path. Both forms of the request-creation path now return 404.
+- Moving the configuration back to an earlier origin silently kept the newer one; rebasing now starts from the current origin. Covered by a unit test.
+
+Not yet validated: a scan with a physical Android phone running Inji Mobile 0.22.x, JSON-LD presentation from the app, and iOS. The rehearsal reproduces the documented wallet requests; it cannot prove app UI behaviour or on-device credential verification.
