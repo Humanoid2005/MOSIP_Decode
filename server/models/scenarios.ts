@@ -244,9 +244,17 @@ export function scenarioOutcome(
     return "INCONCLUSIVE";
   const signature = checks?.find((check) => check.id === "issuer-signature");
   const holder = checks?.find((check) => check.id === "holder-proof");
+  // The rejection is only attributed to the mutation when Inji found nothing
+  // else wrong with the credential; unchecked results (an outage) are not enough.
   if (target)
     return run.credentialMatched &&
       signature?.status === "PASS" &&
+      checkStatus(checks, "expiry") === "PASS" &&
+      ["PASS", "NOT_APPLICABLE"].includes(
+        checkStatus(checks, "credential-status"),
+      ) &&
+      (holder?.status === "PASS" ||
+        (run.scenario === "WRONG_NONCE" && holder?.status === "FAIL")) &&
       (run.scenario === "WRONG_NONCE" ||
         run.scenarioEvidence.matchingMismatchConfirmed)
       ? "PASS"

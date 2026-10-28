@@ -29,6 +29,8 @@ function verifiedRun(
     accepted: boolean;
     holderProof?: VerificationCheck["status"];
     issuerSignature?: VerificationCheck["status"];
+    expiry?: VerificationCheck["status"];
+    credentialStatus?: VerificationCheck["status"];
   },
   options: { presentedNonce?: string; tamperState?: boolean } = {},
 ) {
@@ -86,13 +88,19 @@ function verifiedRun(
           ...check("issuer-signature", verifier.issuerSignature ?? "PASS"),
           source: "INJI_VERIFY" as const,
         },
-        { ...check("expiry"), source: "INJI_VERIFY" as const },
+        {
+          ...check("expiry", verifier.expiry ?? "PASS"),
+          source: "INJI_VERIFY" as const,
+        },
         {
           ...check("holder-proof", verifier.holderProof ?? "PASS"),
           source: "INJI_VERIFY" as const,
         },
         {
-          ...check("credential-status", "NOT_APPLICABLE"),
+          ...check(
+            "credential-status",
+            verifier.credentialStatus ?? "NOT_APPLICABLE",
+          ),
           source: "INJI_VERIFY" as const,
         },
         ...checks,
@@ -112,6 +120,15 @@ test("wrong nonce passes when the verifier rejects the holder binding", () => {
   assert.equal(
     scenarioOutcome(verifiedRun("WRONG_NONCE", { accepted: false })),
     "PASS",
+  );
+});
+
+test("wrong nonce is inconclusive when the verifier could not check the holder proof", () => {
+  assert.equal(
+    scenarioOutcome(
+      verifiedRun("WRONG_NONCE", { accepted: false, holderProof: "NOT_CHECKED" }),
+    ),
+    "INCONCLUSIVE",
   );
 });
 
@@ -171,6 +188,17 @@ for (const scenario of [
       ),
       "INCONCLUSIVE",
     );
+  });
+  test(`${scenario} is inconclusive when the verifier left credential checks undone`, () => {
+    for (const verifier of [
+      { credentialStatus: "NOT_CHECKED" },
+      { expiry: "NOT_CHECKED" },
+      { holderProof: "NOT_CHECKED" },
+    ] as const)
+      assert.equal(
+        scenarioOutcome(verifiedRun(scenario, { accepted: false, ...verifier })),
+        "INCONCLUSIVE",
+      );
   });
 }
 
