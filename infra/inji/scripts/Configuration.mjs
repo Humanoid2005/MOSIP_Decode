@@ -7,6 +7,9 @@ export const root = fileURLToPath(new URL("../../../", import.meta.url));
 export const configHome = resolve(process.env.INJI_CONFIG_HOME || root);
 export const secretsDirectory = resolve(configHome, "infra/inji/secrets");
 export const environmentFile = resolve(configHome, ".env");
+export const generatedDirectory = resolve(root, "infra/inji/generated");
+// Present only while mobile mode publishes the stack on a phone-reachable origin.
+export const mobileStateFile = resolve(generatedDirectory, "mobile.json");
 export const playgroundOrigin = "http://localhost:5173";
 export const definitionId = "00000000-0000-4000-8000-000000000001";
 // Presentation definition per credential format; the SD-JWT definition is created by migration 005.
@@ -15,9 +18,48 @@ export const definitionIds = {
   "vc+sd-jwt": "00000000-0000-4000-8000-000000000002",
 };
 
+export function validateOrigin(name, value) {
+  const url = new URL(value);
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.hash ||
+    url.search ||
+    url.pathname !== "/" ||
+    value.endsWith("/")
+  )
+    throw new Error(name + " must be an HTTPS origin without path or trailing slash.");
+  return value;
+}
+
+export async function readMobileState() {
+  const text = await readFile(mobileStateFile, "utf8").catch(() => null);
+  if (text === null) return null;
+  const state = JSON.parse(text);
+  validateOrigin("Mobile origin", state.origin);
+  return state;
+}
+
 export class Configuration {
-  constructor(values) {
+  constructor(values, baseOrigin = values.INJI_PUBLIC_ORIGIN) {
     this.values = values;
+    // The origin in .env; values derived from it move with the public origin.
+    this.baseOrigin = baseOrigin;
+  }
+
+  withOrigin(origin) {
+    validateOrigin("Public origin", origin);
+    const current = this.origin;
+    const values = { ...this.values };
+    for (const [key, value] of Object.entries(values))
+      if (value === current || value.startsWith(current + "/"))
+        values[key] = origin + value.slice(current.length);
+    return new Configuration(values, this.baseOrigin);
+  }
+
+  get mobile() {
+    return this.origin !== this.baseOrigin;
   }
 
   static async load() {
@@ -86,7 +128,9 @@ export class Configuration {
       if (!info?.isFile() || !info.size)
         throw new Error("Provide infra/inji/secrets/" + file);
     }
-    return new Configuration(values);
+    const configuration = new Configuration(values);
+    const mobile = await readMobileState();
+    return mobile ? configuration.withOrigin(mobile.origin) : configuration;
   }
 
   get origin() {

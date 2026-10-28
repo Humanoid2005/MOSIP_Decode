@@ -141,9 +141,9 @@ services:
 
   inji-web:
     image: injistack/inji-web:0.16.0
+    env_file: ./infra/inji/generated/origin.env
     environment:
       DEFAULT_LANG: en
-      MIMOTO_URL: ${INJI_PUBLIC_ORIGIN:?Set INJI_PUBLIC_ORIGIN}/v1/mimoto
     volumes:
       - type: bind
         source: ./infra/inji/config/web.conf
@@ -156,6 +156,8 @@ services:
 
   verify-service:
     image: injistack/inji-verify-service:0.17.0
+    # INJI_VP_SUBMISSION_BASE_URL and INJI_VERIFY_REDIRECT_URI follow the public origin.
+    env_file: ./infra/inji/generated/origin.env
     environment:
       active_profile_env: default
       DATABASE_HOST: database
@@ -165,10 +167,8 @@ services:
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       INJI_VP_REQUEST_LONG_POLLING_TIMEOUT: "5000"
-      INJI_VP_SUBMISSION_BASE_URL: ${INJI_PUBLIC_ORIGIN:?Set INJI_PUBLIC_ORIGIN}/v1/verify
       SPRING_CONFIG_ADDITIONAL_LOCATION: file:/home/mosip/config/verify.properties
       INJI_KEYSTORE_FILE_PASS: ${VERIFY_KEYSTORE_PASSWORD:?Set VERIFY_KEYSTORE_PASSWORD}
-      INJI_VERIFY_REDIRECT_URI: ${INJI_PUBLIC_ORIGIN:?Set INJI_PUBLIC_ORIGIN}
     volumes:
       - type: bind
         source: ./infra/inji/generated/config/verify.properties
