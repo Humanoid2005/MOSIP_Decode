@@ -14,6 +14,7 @@ import { useWorkspace } from "../../store/workspace";
 import { formatName } from "../../services/presentation";
 import { ErrorNotice, Loading } from "../ui";
 import type { Wallet } from "../../models/playground";
+import { MobileReadiness } from "./MobileReadiness";
 export function FlowConfiguration({ blocked }: { blocked: boolean }) {
   const env = useEnvironment();
   const configured = Boolean(env.data?.certifyUrl && env.data?.issuerUrl);
@@ -218,10 +219,7 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
               </p>
             )}
             {wallet === "INJI_MOBILE" && (
-              <p className="text-sm text-slate-500">
-                Your phone must be able to reach the configured Inji services.
-                Use Inji Web when running only on this computer.
-              </p>
+              <MobileReadiness issuerUrl={env.data?.issuerUrl ?? ""} />
             )}
             <ErrorNotice error={discovery.error} />
             {discovery.error && (
@@ -256,8 +254,9 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
                   />
                 </label>
                 <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Otherwise, initiate the download from the selected Inji
-                  wallet. The playground does not manufacture offers.
+                  {wallet === "INJI_MOBILE"
+                    ? "Otherwise the workbench shows an offer that only names this issuer and credential. Inji Mobile signs in and downloads it through the authorization code flow; no credential is created by the playground."
+                    : "Otherwise, initiate the download from the selected Inji wallet. The playground does not manufacture offers."}
                 </p>
               </details>
             )}

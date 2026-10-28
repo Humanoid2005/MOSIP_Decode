@@ -58,6 +58,13 @@ export function RunStage({ run }: { run: TestRun }) {
               </p>
               <WalletHandoff
                 uri={run.offerUri}
+                // Inji Mobile 0.22 scans offers in-app; it registers no offer deep link.
+                deepLink={run.wallet !== "INJI_MOBILE"}
+                instruction={
+                  run.wallet === "INJI_MOBILE"
+                    ? "In Inji Mobile, open Add card → Scan & Download Card and scan this code. Sign in, then confirm receipt here once the card appears."
+                    : undefined
+                }
                 webUrl={
                   run.wallet === "INJI_WEB"
                     ? run.environment.webWalletUrl
@@ -103,6 +110,11 @@ export function RunStage({ run }: { run: TestRun }) {
             {!["MOCK_WALLET", "INJI_MIMOTO"].includes(run.wallet) && (
               <WalletHandoff
                 uri={run.presentationUri}
+                instruction={
+                  run.wallet === "INJI_MOBILE"
+                    ? "In Inji Mobile, tap Scan, scan this code and share the card."
+                    : undefined
+                }
                 webPresentationUrl={
                   run.wallet === "INJI_WEB"
                     ? webPresentationUrl(

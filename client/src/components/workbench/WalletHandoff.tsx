@@ -7,10 +7,14 @@ export function WalletHandoff({
   uri,
   webUrl,
   webPresentationUrl,
+  instruction,
+  deepLink = true,
 }: {
   uri?: string;
   webUrl?: string;
   webPresentationUrl?: string;
+  instruction?: string;
+  deepLink?: boolean;
 }) {
   const [message, setMessage] = useState("");
   const fitsQr = uri && qrHandoff(uri).fitsQr;
@@ -31,9 +35,10 @@ export function WalletHandoff({
       {uri ? (
         <>
           <p className="max-w-sm text-sm leading-6 text-slate-500">
-            {fitsQr
-              ? "Scan with Inji Wallet, or open the link on the wallet device."
-              : "This request is too large for a reliable QR code. Copy the link or open it on the wallet device."}
+            {!fitsQr
+              ? "This request is too large for a reliable QR code. Copy the link or open it on the wallet device."
+              : (instruction ??
+                "Scan with Inji Wallet, or open the link on the wallet device.")}
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {webPresentationUrl && (
@@ -47,10 +52,12 @@ export function WalletHandoff({
                 <ExternalLink size={15} />
               </a>
             )}
-            <a href={uri} className="btn-primary">
-              Open wallet
-              <ExternalLink size={15} />
-            </a>
+            {deepLink && (
+              <a href={uri} className="btn-primary">
+                Open wallet
+                <ExternalLink size={15} />
+              </a>
+            )}
             <button
               type="button"
               className="btn-secondary"
