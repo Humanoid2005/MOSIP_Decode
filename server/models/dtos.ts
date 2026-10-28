@@ -30,7 +30,7 @@ export interface CredentialConfiguration {
 export interface ProtocolEvent {
   id: string;
   timestamp: string;
-  source: "HTTP" | "PROXY" | "USER" | "WALLET" | "SCENARIO";
+  source: "HTTP" | "PROXY" | "USER" | "WALLET" | "SCENARIO" | "PLAYGROUND";
   title: string;
   method: string;
   endpoint: string;
