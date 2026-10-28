@@ -36,3 +36,15 @@ test("reads the latest quick-tunnel URL from cloudflared logs", () => {
   assert.equal(tunnelOrigin(logs), "https://new-name-two.trycloudflare.com");
   assert.equal(tunnelOrigin("no tunnel yet"), undefined);
 });
+
+test("ignores cloudflared's API host when a tunnel request fails", () => {
+  const logs = [
+    "INF | https://name-one.trycloudflare.com |",
+    'ERR failed to request quick Tunnel error="Post \\"https://api.trycloudflare.com/tunnel\\": EOF"',
+  ].join("\n");
+  assert.equal(tunnelOrigin(logs), "https://name-one.trycloudflare.com");
+  assert.equal(
+    tunnelOrigin('ERR "https://api.trycloudflare.com/tunnel": EOF'),
+    undefined,
+  );
+});

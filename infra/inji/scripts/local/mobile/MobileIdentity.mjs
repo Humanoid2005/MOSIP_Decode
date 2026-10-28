@@ -27,6 +27,10 @@ export function identitySql(fromOrigin, toOrigin) {
 }
 
 // cloudflared prints the quick-tunnel URL in a banner; the latest one wins.
+// Failed requests to its API log api.trycloudflare.com, which is not a tunnel.
 export function tunnelOrigin(logs) {
-  return logs.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/g)?.at(-1);
+  return logs
+    .match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/g)
+    ?.filter((url) => url !== "https://api.trycloudflare.com")
+    .at(-1);
 }

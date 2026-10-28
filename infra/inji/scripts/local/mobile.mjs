@@ -16,8 +16,7 @@ function report(checks) {
 
 try {
   if (command === "start") {
-    const checks = await mode.start(option("--origin"));
-    const { origin } = await mode.status().then((state) => state ?? {});
+    const { origin, checks } = await mode.start(option("--origin"));
     console.log(`\nPhone-reachable origin: ${origin}`);
     console.log("Workbench (this computer only): http://localhost:5173");
     report(checks);
@@ -30,7 +29,15 @@ try {
   } else if (command === "status") {
     const state = await mode.status();
     if (!state) console.log("Mobile mode is off.");
-    else {
+    else if (!state.reachable) {
+      console.log(
+        `Mobile mode is on, but ${state.origin} is not reachable.` +
+          (state.tunnel
+            ? " Quick tunnels can drop after some hours. Run mobile.mjs start for a new URL, then issue the card again."
+            : " Check the tunnel or proxy that serves it."),
+      );
+      process.exitCode = 1;
+    } else {
       console.log(`Mobile mode is on: ${state.origin}`);
       report(state.checks);
     }

@@ -44,9 +44,15 @@ export class MobileMode {
     const previous = await Configuration.load();
     let origin = requestedOrigin;
     if (!origin) {
-      this.log("Starting the Cloudflare quick tunnel…");
-      this.compose("up", "-d", "tunnel");
-      origin = await this.waitForTunnel();
+      // Keep a live tunnel so issued cards stay valid. A dropped quick tunnel never
+      // gets its name back, so it is recreated for a new name and fresh logs.
+      const current = await readMobileState();
+      if (current?.tunnel && (await this.reachable(current.origin))) origin = current.origin;
+      else {
+        this.log("Starting the Cloudflare quick tunnel…");
+        this.compose("up", "-d", "--force-recreate", "tunnel");
+        origin = await this.waitForTunnel();
+      }
     }
     this.log(`Waiting for ${origin} to resolve…`);
     await this.waitForReachable(origin);
@@ -55,7 +61,7 @@ export class MobileMode {
       JSON.stringify({ origin, tunnel: !requestedOrigin }, null, 2) + "\n",
     );
     await this.switchIdentity(previous);
-    return this.doctor();
+    return { origin, checks: await this.doctor() };
   }
 
   async stop() {
@@ -67,7 +73,9 @@ export class MobileMode {
 
   async status() {
     const state = await readMobileState();
-    return state ? { ...state, checks: await this.doctor() } : null;
+    if (!state) return null;
+    const reachable = await this.reachable(state.origin);
+    return { ...state, reachable, checks: reachable ? await this.doctor() : [] };
   }
 
   doctor() {
@@ -154,13 +162,17 @@ export class MobileMode {
   async waitForReachable(origin) {
     await pause(5000);
     for (let attempt = 0; attempt < 40; attempt++) {
-      const response = await fetch(origin + "/config/farmer.json", {
-        signal: AbortSignal.timeout(10000),
-      }).catch(() => null);
-      if (response?.ok) return;
+      if (await this.reachable(origin)) return;
       await pause(3000);
     }
     throw new Error(`${origin} is not reachable from this computer.`);
+  }
+
+  async reachable(origin) {
+    const response = await fetch(origin + "/config/farmer.json", {
+      signal: AbortSignal.timeout(10000),
+    }).catch(() => null);
+    return Boolean(response?.ok);
   }
 
   compose(...args) {
