@@ -2,13 +2,13 @@ import { randomBytes } from "node:crypto";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import { root } from "../Configuration.mjs";
+import { root } from "./Configuration.mjs";
 
 export class LocalDevelopment {
   async prepare() {
     const envPath = resolve(root, ".env");
     if (await access(envPath).then(() => true, () => false))
-      throw new Error("Root .env already exists. Preserve it; use prepare.mjs to render the existing setup.");
+      throw new Error("Root .env already exists. Preserve it; run npm start.");
     const secrets = resolve(root, "infra/inji/secrets");
     await mkdir(secrets, { recursive: true });
     for (const name of ["oidckeystore.p12", "verify-keystore.p12", "local-ca.key", "gateway.key"])
@@ -18,6 +18,8 @@ export class LocalDevelopment {
     const origin = "https://inji.127.0.0.1.sslip.io";
     const auth = origin + "/auth/realms/inji";
     const values = {
+      // Lets a plain `docker compose` load the local override with the base file.
+      COMPOSE_FILE: "docker-compose.yml:docker-compose.local.yml",
       INJI_LOCAL_DEVELOPMENT: "true", INJI_PUBLIC_ORIGIN: origin,
       INJI_GATEWAY_PORT: "8091", INJI_TLS_PORT: "8443",
       POSTGRES_PASSWORD: password(), CERTIFY_KEYSTORE_PASSWORD: password(),

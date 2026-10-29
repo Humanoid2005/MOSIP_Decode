@@ -1,6 +1,8 @@
-.git
+# The playground images need only these folders; everything else stays out of the build context.
+*
+!client/
+!server/
+!infra/playground/
 **/node_modules
 **/dist
 **/.env
-infra/inji/secrets
-infra/inji/generated

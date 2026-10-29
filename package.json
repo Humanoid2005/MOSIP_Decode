@@ -1,0 +1,22 @@
+{
+  "name": "inji-interoperability-playground",
+  "private": true,
+  "description": "Task runner for the local stack. The client and server keep their own package.json.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "bootstrap": "node infra/inji/scripts/bootstrap.mjs",
+    "prepare:config": "node infra/inji/scripts/prepare.mjs",
+    "start": "npm run prepare:config && docker compose up -d --build --wait --wait-timeout 600",
+    "stop": "docker compose stop",
+    "status": "docker compose ps -a",
+    "logs": "docker compose logs -f --tail 100 playground-server playground-client",
+    "rebuild:client": "docker compose up -d --build --no-deps --wait playground-client",
+    "rebuild:server": "docker compose up -d --build --no-deps --wait playground-server",
+    "restart:inji": "npm run prepare:config && docker compose restart certify mimoto-service verify-service",
+    "upgrade": "node infra/inji/scripts/upgrade.mjs",
+    "dev:server": "cd server && NODE_EXTRA_CA_CERTS=\"$PWD/../infra/inji/secrets/local-ca.crt\" npm run dev",
+    "dev:client": "cd client && npm run dev"
+  }
+}

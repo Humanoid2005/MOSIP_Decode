@@ -78,9 +78,11 @@ export function MimotoWalletPanel({ run }: { run: TestRun }) {
     );
   if (candidate && credentials.isPending)
     return <p role="status">Checking wallet unlock status…</p>;
+  // Mimoto 0.21 reports a locked wallet as HTTP 400 with errorCode wallet_locked.
   const unlockRequired =
     credentials.error instanceof ApiError &&
-    [401, 403, 423].includes(credentials.error.status);
+    ([401, 403, 423].includes(credentials.error.status) ||
+      credentials.error.code === "wallet_locked");
   if (credentials.error && !unlockRequired)
     return (
       <>

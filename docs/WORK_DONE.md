@@ -219,3 +219,52 @@ Server/client builds and client lint passed in Docker (host node_modules had bro
 ## Follow-up bug review — 26 October 2026
 
 Fixed the actual JSON-LD happy-path descriptor mismatch in the pinned Mimoto implementation, strengthened negative-scenario attribution and independent checks, corrected NOT_APPLICABLE credential-status reporting, surfaced detailed errors in the workbench/inspector, retained non-JSON failure evidence, prevented stale UI status overwrites, and added backend result collection with retry/error persistence and submission-capture ordering. No new test cases or public deployment were added. Current implementation and manual evidence are in the final section of [LIVE_VALIDATION.md](context/LIVE_VALIDATION.md). Normal and bad-signature replay both passed their respective expectations on the final images without client polling. The wrong-nonce upstream acceptance gap remains a visible failed scenario. This work changed the active `Documents/MOSIP-Decode` checkout, not the older mounted-volume copy. Existing uncommitted changes and persistent stack data were preserved.
+
+## Live browser validation — 29 October 2026 (Claude Code)
+
+- Restarted the existing Compose volumes and rebuilt the images from `59be5ed`. All 12 services were healthy. Host Node 20 ran `prepare.mjs` without problems.
+- Ran four journeys through the browser UI:
+  - Mock wallet SD-JWT: normal (PASS) and linked bad-signature replay (scenario PASS).
+  - Embedded Mimoto JSON-LD: normal (PASS) and bad signature (scenario PASS).
+- Fixed two browser-only embedded-wallet defects in the client:
+  - Mimoto rejected Chrome's `Accept-Language` list.
+  - The `wallet_locked` HTTP 400 was not routed to the PIN form.
+- Details and evidence are in `context/LIVE_VALIDATION.md` and `context/evidence/*-2026-10-29.json`.
+- The in-app browser cannot load the HTTPS origin, because it does not trust the CA. The user performs Keycloak sign-in and the HTTPS workbench steps in their own browser.
+- Docker Desktop was OOM-killed during a client rebuild. Let the Java services become healthy before building.
+- Added `TO_RUN.md` with run commands.
+- Open minor UI items:
+  - After a reload, the inspector has no selected run and shows a misleading empty state.
+  - The credential is not switched automatically when the mock wallet is chosen.
+- Added the live, animated Mermaid sequence-diagram dialog. It opens from the workbench step indicator, and `mermaid@11.17.2` is lazy-loaded.
+  - The pure builder is `client/src/services/sequenceDiagram.ts`; the renderer and dialog are in `client/src/components/inspector/`.
+- Also fixed:
+  - stale `index.html` caching, in `infra/playground/nginx.conf`;
+  - the workbench dropping a resumed run when it finished, in `useCurrentRun`.
+- The `playground-client` image was later rebuilt properly during the restructure below.
+
+## Repository restructure and simpler setup — 29 October 2026 (Claude Code)
+
+Requested: make the project lighter and easier to set up without losing functionality, give it a clear folder structure, and ignore unnecessary files.
+
+- **Layout.** `context/` became `docs/`, and `WORK_DONE.md` moved into it. Older entries above still name the previous paths. The Certify, Mimoto and Keycloak patches moved to `infra/inji/images/`, and `infra/inji/scripts/local/` was flattened into `infra/inji/scripts/`.
+- **One command.**
+  - A root `package.json` (no dependencies) holds the tasks: `start`, `stop`, `status`, `logs`, `rebuild:client`, `rebuild:server`, `restart:inji`, `upgrade`, `bootstrap`, `dev:server` and `dev:client`.
+  - `.env` now sets `COMPOSE_FILE=docker-compose.yml:docker-compose.local.yml`, so plain `docker compose` loads both files, and `bootstrap` writes the same line. Both Compose files are kept, because the base file still serves the external-authorization setup. Apart from the three moved build contexts, the resolved Compose model is unchanged.
+- **Removed:**
+  - the legacy `sync-runtime.mjs` and the `INJI_CONFIG_HOME` override, both unused since the 26 October reset;
+  - the three upgrade helpers, now combined into the idempotent `scripts/upgrade.mjs`. It runs through `docker compose exec` instead of fixed container names.
+- **Lighter images:**
+  - Keycloak's provider is compiled with `javac` against the image's own jars, so `pom.xml` and the Maven dependency download are gone.
+  - The server runtime image installs production dependencies only.
+  - `.dockerignore` limits the playground build context to `client/`, `server/` and `infra/playground/`.
+- **Git hygiene.**
+  - `.gitignore` is now a single root file.
+  - These are no longer tracked: `server/.env` (it held only `PORT`), `client/.gitignore`, and the OpenSSL by-products `gateway.csr` and `local-ca.srl`. All of them remain on disk.
+- **Verified:**
+  - `npm start` built every changed image and brought all 12 services to healthy;
+  - Keycloak loaded `inji-credential-nonce`;
+  - `npm run upgrade` succeeded against the existing volumes;
+  - no volumes were deleted.
+  - a browser SD-JWT mock-wallet run on the rebuilt images: Keycloak sign-in, issuance with the nonce mapper, and verification. Inji Verify accepted the presentation and the end-to-end checks passed.
+- The unused `inji-playground_runtime` volume from the legacy sync setup still exists. Remove it only with the user's approval.

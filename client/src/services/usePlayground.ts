@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/PlaygroundApi";
 import { useWorkspace } from "../store/workspace";
@@ -22,6 +23,11 @@ export function useCurrentRun() {
     ["ISSUING", "HELD", "VERIFYING"].includes(run.phase),
   );
   const id = selected ?? active?.id;
+  const select = useWorkspace((state) => state.selectRun);
+  // Keep a resumed run selected after it finishes, so its result stays visible.
+  useEffect(() => {
+    if (!selected && active) select(active.id);
+  }, [selected, active, select]);
   return useQuery({
     queryKey: ["run", id],
     queryFn: () => api.run(id!),

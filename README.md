@@ -2,39 +2,37 @@
 
 A React workbench and Express orchestrator for Inji Certify, Inji Mobile / Web, and Inji Verify. This implementation uses configurable real services. It does not simulate credentials or verification outcomes.
 
-## Local development
+## Quick start
 
-The local stack includes the client, server, Inji services and Keycloak. Open the integrated workbench at https://inji.127.0.0.1.sslip.io/playground/. The localhost entry remains http://localhost:5173, and standalone Inji Web remains https://inji.127.0.0.1.sslip.io. Follow [the local setup guide](infra/inji/README.md) for login, certificates, startup, persistence and supported flows.
-
-For this configured workspace:
+Requirements: Docker with about 6 GB of memory, and Node.js 22. From the repository root:
 
 ```bash
-unset INJI_CONFIG_HOME
-node infra/inji/scripts/prepare.mjs
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build --wait --wait-timeout 600
+npm start
 ```
 
-The shared development `.env` and `infra/inji/secrets/` are committed for the private team, so a fresh clone needs only the commands above with Node.js 22 and Docker. Both frontend and backend are built and started by Compose. A new database and Keycloak realm are initialized automatically, including the embedded wallet callback. Do not run `bootstrap.mjs` on a clone; it refuses because `.env` exists. Use **Step 0 · Create account / Sign in** in the HTTPS workbench, then choose **Register** on Keycloak’s sign-in page. New accounts receive a persistent synthetic farmer record on first issuance. The optional seeded `farmer` login still uses `LOCAL_FARMER_PASSWORD` from `.env`. Accept the browser certificate warning instead of trusting `local-ca.crt` system-wide: its private key is shared.
+This renders the local configuration and builds and starts all 12 services. Open the workbench at https://inji.127.0.0.1.sslip.io/playground/ (the in-page Inji wallet needs this HTTPS origin) or http://localhost:5173, and accept the local certificate warning. Sign in with **Step 0 · Create account / Sign in**. Other tasks (`stop`, `logs`, `rebuild:client`, `upgrade`, …) are in the root [package.json](package.json).
 
-For legacy runtime-volume installations with older secrets, follow the preservation instructions in the local setup guide before changing configuration. On this workstation the user explicitly authorized a full reset; the new direct Compose setup now uses this checkout’s `.env` and keys. The previous workspace is no longer needed.
+The shared development `.env` and `infra/inji/secrets/` are committed for the private team, so a clone needs no bootstrap step. Before the repository becomes public, remove both from history and run `npm run bootstrap` to create new private values. Do not trust `local-ca.crt` system-wide, because its private key is shared.
 
-Before the repository becomes public, remove `.env` and `infra/inji/secrets/` from history and run `node infra/inji/scripts/local/bootstrap.mjs` to create new private values. No public account or tunnel is required for the local Inji Web flow.
+## Repository layout
 
-To run client/server outside Docker, use Node.js 22.19+ in the Node 22 line, install dependencies with `npm ci` in each directory, and run `npm run dev` in both. The server reads the generated endpoints; nonempty `INJI_*` environment settings override them. Set `NODE_EXTRA_CA_CERTS` to the absolute path of `infra/inji/secrets/local-ca.crt` when calling the local HTTPS origin. Configure endpoints through files; Connections remains intentionally removed. The direct Compose workflow uses bind mounts for configuration and named volumes for mutable data. The legacy runtime-volume synchronization script remains available for environments where bind mounts do not work.
+| Path | Contents |
+| --- | --- |
+| `client/` | React workbench (Vite, TanStack Query, Zustand) |
+| `server/` | Express orchestrator, protocol bridge and telemetry |
+| `infra/playground/` | Dockerfile and Nginx configuration for the client and server images |
+| `infra/inji/images/` | Small source patches layered on the pinned Certify, Mimoto and Keycloak images |
+| `infra/inji/config/`, `migrations/`, `upstream/` | Gateway configuration, SQL migrations and pinned upstream seeds |
+| `infra/inji/scripts/` | `prepare`, `bootstrap`, `upgrade` and their renderers |
+| `infra/inji/secrets/` | Shared development keys and certificates |
+| `docs/` | Problem statement, architecture, validation records, work log and exported evidence |
+| `docker-compose.yml` + `docker-compose.local.yml` | Inji stack, plus the local Keycloak, HTTPS gateway and playground services. `.env` sets `COMPOSE_FILE` so plain `docker compose` loads both. |
 
 ## Integrated Inji wallet
 
-Select **Inji wallet · in this page** on the HTTPS workbench. Sign in through local Keycloak, create or unlock your wallet, and select **Authorize and receive credential**. Mimoto receives the selected credential and confirms storage automatically. Request verification, review the verifier and full-credential disclosure, and select **Approve and share credential**. The workbench displays the real Verify result. JSON-LD is supported by this pinned Mimoto release.
+Select **Inji wallet · in this page** on the HTTPS workbench. Sign in through local Keycloak, create or unlock your wallet, and select **Authorize and receive credential**. Mimoto receives the selected credential and confirms storage automatically. Request verification, review the verifier and full-credential disclosure, and select **Approve and share credential**. The workbench displays the real Verify result. JSON-LD is supported by this pinned Mimoto release. The normal Inji Web login still returns to its passcode page; a workbench login returns to the workbench.
 
-Existing Keycloak realms also need the additional issuance callback; realm imports do not update existing clients:
-
-```bash
-node infra/inji/scripts/local/update-wallet-client.mjs
-```
-
-Run it after Keycloak starts, using the same `INJI_CONFIG_HOME` as preparation when applicable. It adds only the workbench callback and preserves existing registrations. The normal Inji Web login still returns to its passcode page; a workbench login returns to the workbench.
-
-See [the implementation review](context/IMPLEMENTATION_REVIEW.md) for findings, fixed gaps and remaining work, and [live validation](context/LIVE_VALIDATION.md) for evidence and limits.
+See [the implementation review](docs/IMPLEMENTATION_REVIEW.md) for findings, fixed gaps and remaining work, and [live validation](docs/LIVE_VALIDATION.md) for evidence and limits.
 
 ## Use the workbench
 
@@ -48,11 +46,11 @@ See [the implementation review](context/IMPLEMENTATION_REVIEW.md) for findings, 
 
 ### Formats and wallets
 
-The local stack advertises `FarmerCredential` (JSON-LD, Ed25519Signature2020) and `FarmerCredentialSdJwt` (`vc+sd-jwt`, ES256, selectively disclosable claims). Inji Web 0.16 / Mimoto 0.21 can store SD-JWT credentials but cannot present them over OpenID4VP; see [the validation record](context/LIVE_VALIDATION.md).
+The local stack advertises `FarmerCredential` (JSON-LD, Ed25519Signature2020) and `FarmerCredentialSdJwt` (`vc+sd-jwt`, ES256, selectively disclosable claims). Inji Web 0.16 / Mimoto 0.21 can store SD-JWT credentials but cannot present them over OpenID4VP; see [the validation record](docs/LIVE_VALIDATION.md).
 
 Choose **Playground mock wallet** to run SD-JWT end to end. It is a minimal OpenID4VCI / OpenID4VP holder outside the Inji stack, registered in Keycloak as the public PKCE client `playground-mock-wallet`. **Sign in and issue** opens Keycloak; after sign-in the wallet proves possession of a fresh `did:jwk` key, stores the credential and advances the run. **Present with mock wallet** discloses every claim with a Key Binding JWT. Its traffic uses public endpoints and passes through the protocol bridge. It authenticates the pinned did:web verifier's EdDSA request signature and validates its identity, endpoint, nonce, state and presentation definition before sharing. It does not support JSON-LD.
 
-Existing environments need migrations `004` (Inji Certify database) and `005` (Inji Verify database), a Certify and Mimoto restart (Mimoto caches issuer metadata), and the realm changes in `RealmRenderer.mjs`. Fresh databases and realms receive these from initialization; migrate existing environments without deleting their volumes.
+Fresh databases and realms receive the SD-JWT configuration from initialization. Older environments need migrations `004` (Inji Certify database) and `005` (Inji Verify database), the realm changes in `RealmRenderer.mjs`, and a Certify and Mimoto restart; migrate them without deleting their volumes.
 
 Issuer-led offer creation and onboarding APIs vary by Certify release. The current adapter supports wallet-initiated downloads and externally supplied offers; it does not automatically create an offer through Certify's administrative APIs.
 
@@ -71,6 +69,17 @@ Only GET and POST are forwarded. Request/response bodies are bounded at 5 MB. Au
 For full visibility, the connected Inji environment must already advertise bridge URLs in its metadata and callback configuration, preserving the canonical issuer and verifier trust identities. `PUBLIC_BASE_URL` displays the expected prefix; setting it alone does **not** reconfigure Inji or create network connectivity. The public URL must be reachable by the wallet. The local Compose gateway wires these routes through the bridge; no tunnel is provisioned.
 
 Use a dedicated development environment with one active run at a time. Token exchanges seen during that issuance session establish token-to-run correlation; `/credential` responses are associated only with a token observed by the bridge. Direct token exchanges, traffic from other wallets, encrypted payloads, and paths outside the allowlist are not fully observable. Mimoto owns the wallet login, encrypted credential storage and presentation flow.
+
+### Live sequence diagram
+
+On the Workbench, **View sequence flow diagram** sits next to the step indicator. It opens a Mermaid sequence diagram of the current run, built from the same captured events as the inspector. The diagram has five lanes: Playground, the selected wallet, Keycloak, Inji Certify and Inji Verify.
+
+- **Arrows.** Each observed exchange is drawn as a numbered request arrow plus a dotted response arrow with its HTTP status and duration. Bridge traffic is labelled "via bridge". A failed response is drawn as a red crossed arrow.
+- **Notes.** Notes mark the OpenID4VCI and OpenID4VP phases and the wallet-internal steps. Controlled scenario changes appear in an amber band.
+- **Live updates.** While a run is active, new arrows animate in and the view scrolls to the latest one.
+- **Interaction.** Selecting an arrow shows its captured payload. **Replay animation** redraws the whole flow.
+
+Mermaid is loaded only when the dialog first opens. Labels from captured values are reduced to safe characters before rendering. The diagram shows only traffic that the orchestrator and bridge observed, as the inspector does.
 
 ## Outcomes and evidence
 
@@ -104,15 +113,7 @@ Report version 3 separates `scenarioResult` from `verdict` and `interoperability
 
 **Replay with a scenario** on a finished run starts a linked run (`parentRunId`) with fresh issuance and a new verifier request. It does not reuse an old `vp_token` or transfer wallet keys between sessions. The original evidence remains available until the in-memory history is evicted or the server restarts.
 
-Fresh local installations include the signed fixtures and Keycloak scopes through the configuration renderer. To upgrade an existing local stack without resetting its data:
-
-```bash
-node infra/inji/scripts/local/enable-negative-scenarios.mjs
-docker compose -f docker-compose.yml -f docker-compose.local.yml restart certify mimoto-service
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build --no-deps playground-server playground-client
-```
-
-The helper only adds fixture configurations/scopes and changes the normal JSON-LD scope from default to optional. Wallets already request the selected credential scope explicitly. This avoids this Certify release stopping at an unrelated default credential scope. Sign in again after restarting Mimoto. Local service configuration and existing credentials are preserved.
+Fresh local installations include the signed fixtures and Keycloak scopes. To bring a stack created before these features up to date without resetting its data, run `npm run upgrade` while it is running. It makes the normal JSON-LD scope optional instead of default, because this Certify release can stop at an unrelated default credential scope. Sign in again afterwards, because it restarts Mimoto.
 
 ## Code organization
 

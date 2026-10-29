@@ -4,9 +4,8 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 export const root = fileURLToPath(new URL("../../../", import.meta.url));
-export const configHome = resolve(process.env.INJI_CONFIG_HOME || root);
-export const secretsDirectory = resolve(configHome, "infra/inji/secrets");
-export const environmentFile = resolve(configHome, ".env");
+export const secretsDirectory = resolve(root, "infra/inji/secrets");
+export const environmentFile = resolve(root, ".env");
 export const playgroundOrigin = "http://localhost:5173";
 export const definitionId = "00000000-0000-4000-8000-000000000001";
 // Presentation definition per credential format; the SD-JWT definition is created by migration 005.

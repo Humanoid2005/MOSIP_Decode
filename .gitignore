@@ -1,10 +1,36 @@
+# Dependencies and build output
 node_modules/
 dist/
+dist-ssr/
+*.tsbuildinfo
+coverage/
 
-# Rendered by prepare.mjs and sync-runtime.mjs; contains machine-specific absolute paths.
+# Local environment files. The root .env is the exception: it is committed on purpose (see below).
+server/.env
+client/.env
+*.local
+
+# Rendered by `npm run prepare:config`; contains resolved secrets and machine-specific paths.
 infra/inji/generated/
+
+# OpenSSL by-products of bootstrap; not needed at runtime.
+infra/inji/secrets/*.csr
+infra/inji/secrets/*.srl
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editors, OS and assistant files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.sw?
+.claude/
+CLAUDE.md
 
 # The root .env and infra/inji/secrets/ are committed intentionally so the private team
 # shares one local development identity. Before making this repository public, remove
-# them from history and regenerate them with infra/inji/scripts/local/bootstrap.mjs.
-CLAUDE.md
+# them from history and regenerate them with `npm run bootstrap`.

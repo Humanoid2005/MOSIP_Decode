@@ -1,4 +1,4 @@
-This directory holds `oidckeystore.p12` (the onboarded Mimoto OIDC client key and certificate), `verify-keystore.p12` (an Ed25519 private key and certificate), the local CA and the gateway certificate. They are committed so the private team shares one development identity; remove them from history and regenerate them with `infra/inji/scripts/local/bootstrap.mjs` before the repository becomes public.
+This directory holds `oidckeystore.p12` (the onboarded Mimoto OIDC client key and certificate), `verify-keystore.p12` (an Ed25519 private key and certificate), the local CA and the gateway certificate. They are committed so the private team shares one development identity; remove them from history and regenerate them with `npm run bootstrap` before the repository becomes public.
 
 Mimoto's keystore is writable because its key manager also stores generated keys. The verifier keystore is read-only. Preserve Mimoto's keystore with its database; replacing only one can make stored wallet data unreadable.
 

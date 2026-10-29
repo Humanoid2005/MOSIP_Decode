@@ -139,3 +139,65 @@ Server TypeScript, client ESLint/TypeScript/Vite and the pinned Java wallet buil
 ### Remaining boundaries
 
 Pinned Inji Verify still accepts the diagnostic SD-JWT wrong-nonce submission (run `7640db4e-5966-4990-83a3-0703315c5cb5`). The playground's independent nonce check fails and the report is FAIL / Unexpected acceptance. Existing upstream format/type/proof acceptance gaps with the diagnostic holder are not reclassified as passes. The unsupported-DID fixture's generic wallet error remains inconclusive unless a precise rejection reason is observed. Earlier intermittent issuer HTTP 400 failures did not recur after the wallet rebuild; no definitive root cause is claimed for them. History remains in memory and the single active run is global to this local development workbench.
+
+## Browser-driven mock-wallet journey — 29 October 2026
+
+The existing Compose volumes were restarted with images rebuilt from commit `59be5ed`, which includes the 27 October server, bridge and telemetry fixes. All 12 services reported healthy, and the wallet key initializer exited 0. API health, the localhost and HTTPS workbenches, Inji Web and issuer discovery returned HTTP 200. Discovery listed `FarmerCredential`, `FarmerCredentialSdJwt` and both fixture configurations.
+
+For the first time, the workbench was driven in a browser at `http://localhost:5173`. The in-app browser does not trust the local CA, so the user completed the Keycloak sign-in in their own browser. All other steps ran through the workbench UI.
+
+| Run | Wallet / format | Scenario | Verify verdict | Report outcome |
+| --- | --- | --- | --- | --- |
+| `e5ebfa10-dc4e-46d6-a21d-83887b61d606` | Mock wallet / `vc+sd-jwt` | Normal | VALID | PASS; all 13 independent request checks pass; issuance matched |
+| `8b6bb1d7-e9bf-406c-a391-4263d372125e` | Mock wallet / `vc+sd-jwt` | Bad signature (linked replay of the run above) | INVALID | Scenario PASS; `rejectionReasonConfirmed=true`; mutation `issuerJwt.signature` |
+
+The UI behaved as follows:
+
+- After issuance and after verification, the run advanced through WebSocket refetches without any manual refresh.
+- When the pane blocked the sign-in tab, the fallback link appeared.
+- The inspector listed 14 exchanges with request and response views.
+- Report export downloaded v3 JSON. Its `code`, `code_verifier`, `access_token` and `refresh_token` values are redacted.
+- No errors were logged by the playground server, Verify or Certify.
+
+Sanitized reports are in [evidence/browser-mock-wallet-2026-10-29.json](evidence/browser-mock-wallet-2026-10-29.json).
+
+Minor UI observations:
+
+- After a page reload, the inspector has no selected run. It then shows "No captured exchanges yet" even though completed runs exist.
+- Selecting the mock wallet while JSON-LD is chosen does not switch to the SD-JWT credential. Start is disabled and the reason is shown.
+
+### Embedded Mimoto in a real browser
+
+The user drove the embedded wallet in Chrome on the HTTPS workbench. This was the first time the embedded Mimoto flow ran in a real browser rather than through authenticated HTTP. It exposed two browser-only defects:
+
+1. **Locale header.** Browser calls to `GET /v1/mimoto/wallets/{id}/credentials` sent Chrome's `Accept-Language` list. Mimoto 0.21 rejects that list with HTTP 400 "Locale must be a 2-letter code". The browser Mimoto client now sends `en`, as the server-side client and Inji Web already do.
+2. **Locked wallet.** Mimoto 0.21 reports a locked wallet as HTTP 400 `wallet_locked`, not as 401/403/423. The panel therefore showed an error instead of the PIN form. `ApiError` now carries Mimoto's `errorCode`, and `wallet_locked` routes to unlock.
+
+During a client rebuild, systemd OOM-killed `docker-desktop.service`, which runs on a 15 GB host. After the user restarted it, the containers recovered without data loss. The in-memory run history was lost; the reports above had already been saved. The client was rebuilt only after the Java services became healthy.
+
+After both fixes, the following runs used Certify 0.14.0, the embedded Mimoto 0.21.0 wallet and Verify 0.17.0, with the JSON-LD `FarmerCredential`:
+
+| Run | Scenario | Verify verdict | Report outcome |
+| --- | --- | --- | --- |
+| `c1c81eea-cd51-4a19-8ef4-cf25696ffab7` | Normal | VALID | PASS; `holderReceiptSource=MIMOTO`; issuance matched; all independent checks pass |
+| `63dfef98-5816-4c5c-8716-aefa5a020dcf` | Bad signature (`presentation.proof.jws` mutated at the bridge) | INVALID | Scenario PASS; `rejectionReasonConfirmed=true`; credential matched |
+
+Sanitized reports are in [evidence/browser-mimoto-2026-10-29.json](evidence/browser-mimoto-2026-10-29.json).
+
+The two primary journeys are now validated through the browser UI: Inji to Inji with JSON-LD, and Inji Certify and Verify with the non-Inji wallet and SD-JWT. Physical mobile coverage and the remaining negative scenarios were not repeated in this session.
+
+### Live sequence diagram — 29 October 2026
+
+The new workbench sequence dialog was checked in the in-app browser on a mock wallet SD-JWT run (`43c47866-3325-4224-bb95-56aafadbdf8e`, VALID / PASS, 14 events, 18 arrows).
+
+- Token and `/credential` arrows arrived live while the dialog was open. Only the newly added arrows animated, and the latest exchange was highlighted.
+- The OpenID4VP section completed the diagram, and finished runs show "Recorded".
+- Selecting an arrow opened its payload.
+- The generated Mermaid source parsed successfully for all four of today's saved runs. It also parsed for synthetic edge cases: failed responses, hostile labels and an empty run.
+
+Two client fixes were made during this check:
+
+- The client Nginx now sends `Cache-Control: no-cache` for the HTML entry and immutable caching for hashed assets. Previously, browsers kept serving the old `index.html` after a deploy.
+- A run that was resumed after a page reload (for example, on return from Keycloak) is now pinned as the selection. Previously, the workbench dropped it and its result when the run stopped being active. This was checked by reloading mid-run and then cancelling.
+
+Docker Desktop's VM memory is set to 12 GB on a 15.6 GB host, and in-container image builds were OOM-killed twice. The new client build was therefore compiled on the host and copied into the running `playground-client` container. The client image itself still needs a rebuild before this deployment survives container recreation.

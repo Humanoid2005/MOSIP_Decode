@@ -5,11 +5,11 @@ services:
   keycloak:
     image: inji-playground-keycloak:26.0.8-local
     build:
-      context: ./infra/inji/keycloak
+      context: ./infra/inji/images/keycloak
     command: [start-dev, --import-realm]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Run local/bootstrap.mjs}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Run npm run bootstrap}
       KC_HOSTNAME: ${INJI_PUBLIC_ORIGIN}/auth
       KC_HTTP_RELATIVE_PATH: /auth
       KC_PROXY_HEADERS: xforwarded
@@ -34,7 +34,7 @@ services:
   certify:
     image: inji-playground-certify:0.14.0-local
     build:
-      context: ./infra/inji/certify
+      context: ./infra/inji/images/certify
     environment:
       <<: *java-environment
     volumes:
@@ -49,7 +49,7 @@ services:
   mimoto-service:
     image: inji-playground-mimoto:0.21.0-local
     build:
-      context: ./infra/inji/mimoto
+      context: ./infra/inji/images/mimoto
     environment:
       <<: *java-environment
     volumes:

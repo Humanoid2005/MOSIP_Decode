@@ -40,3 +40,70 @@
     @apply rounded-2xl border border-slate-200 bg-white;
   }
 }
+@layer components {
+  .sequence-diagram svg {
+    @apply mx-auto h-auto max-w-none;
+  }
+}
+/* Mermaid scopes its own styles under the SVG's id, so state colours need !important. */
+.sequence-diagram .seq-clickable {
+  cursor: pointer;
+}
+.sequence-diagram .seq-new {
+  animation: seq-fade 0.45s ease-out both;
+}
+.sequence-diagram .messageLine0.seq-new {
+  stroke-dasharray: 1 !important;
+  animation:
+    seq-fade 0.2s ease-out both,
+    seq-draw 0.6s ease-out both;
+}
+.sequence-diagram .seq-latest:not(text) {
+  stroke: #0f766e !important;
+}
+.sequence-diagram text.seq-latest {
+  fill: #0f766e !important;
+  font-weight: 600;
+}
+.sequence-diagram .seq-failed:not(text) {
+  stroke: #b91c1c !important;
+}
+.sequence-diagram text.seq-failed {
+  fill: #b91c1c !important;
+}
+.sequence-diagram .seq-selected:not(text) {
+  stroke: #115e59 !important;
+  stroke-width: 2.5px !important;
+}
+.sequence-diagram text.seq-selected {
+  fill: #115e59 !important;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.sequence-diagram text.seq-clickable:focus:not(:focus-visible) {
+  outline: none;
+}
+.sequence-diagram text.seq-clickable:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+@keyframes seq-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes seq-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sequence-diagram .seq-new,
+  .sequence-diagram .messageLine0.seq-new {
+    animation: none;
+    stroke-dasharray: none !important;
+  }
+}

@@ -29,6 +29,8 @@ class MimotoApi {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          // Mimoto rejects the browser's default list; it accepts a bare 2-letter code.
+          "Accept-Language": "en",
           ...(token ? { "X-XSRF-TOKEN": decodeURIComponent(token) } : {}),
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -55,6 +57,7 @@ class MimotoApi {
           : typeof error.error === "string"
             ? error.error
             : `Wallet returned HTTP ${response.status}.`,
+        typeof error.errorCode === "string" ? error.errorCode : undefined,
       );
     return data as T;
   }

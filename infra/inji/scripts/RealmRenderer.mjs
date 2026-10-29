@@ -1,6 +1,6 @@
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { secretsDirectory, playgroundOrigin } from "../Configuration.mjs";
+import { secretsDirectory, playgroundOrigin } from "./Configuration.mjs";
 
 export class RealmRenderer {
   constructor(configuration) { this.config = configuration; }
