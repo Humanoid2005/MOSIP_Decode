@@ -121,7 +121,7 @@ The running Compose project is `/home/sriram-srikanth/Documents/MOSIP-Decode`; t
 
 ### Corrections
 
-- Mimoto 0.21.0 used its storage UUID for `descriptor_map.id`. The local pinned-source correction now passes the authenticated input descriptor ID into OpenID4VP construction. It supports exactly one descriptor/credential and rejects ambiguous mappings before signing. The actual holder signature remains produced by Mimoto. See `infra/inji/mimoto/README.md`.
+- Mimoto 0.21.0 used its storage UUID for `descriptor_map.id`. The local pinned-source correction now passes the authenticated input descriptor ID into OpenID4VP construction. It supports exactly one descriptor/credential and rejects ambiguous mappings before signing. The actual holder signature remains produced by Mimoto. See `infra/inji/images/mimoto/README.md`.
 - Negative signature/expiry outcomes require correlated results and intact request bindings. Unrelated failed protocol checks cannot be hidden by a generic INVALID result. `rejectionReasonConfirmed` now agrees with the scenario assessment.
 - Empty credential-status checks are NOT_APPLICABLE, rather than claiming revocation was checked. Missing status evidence still cannot produce a normal pass.
 - The inspector now displays the saved run error and detailed verification failures, defaults to a failed exchange or latest result, and describes scenario mutations accurately. Failed/missing checks remain visible; other checks are collapsed. HTTP success remains distinct from acceptance.

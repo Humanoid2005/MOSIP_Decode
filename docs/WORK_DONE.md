@@ -9,7 +9,7 @@ The latest runtime instructions are in section 9: the user authorized a full Doc
 
 The user explicitly asked to start Docker, make the Inji stack work, replace nonfunctional integrations and connect the real client/server/wallet/verifier. They chose a **local development setup** without external identity-provider registrations or a public tunnel. This supersedes the earlier instruction to prepare Compose without running it.
 
-The local stack and compatibility work are described in [infra/inji/README.md](infra/inji/README.md). Consult [context/LIVE_VALIDATION.md](context/LIVE_VALIDATION.md) for actual verified outcomes and remaining boundaries. Do not equate a running container, successful compilation or a captured issued credential with a completed wallet-to-verifier journey.
+The local stack and compatibility work are described in [infra/inji/README.md](../infra/inji/README.md). Consult [LIVE_VALIDATION.md](LIVE_VALIDATION.md) for actual verified outcomes and remaining boundaries. Do not equate a running container, successful compilation or a captured issued credential with a completed wallet-to-verifier journey.
 
 The approved UI remains the React workbench, protocol inspector and run history. Connections was intentionally removed; do not restore it. Service configuration comes from files. Focused server unit tests were added on 27 October 2026 (see section 2.5). No public deployment or demo video has been added.
 
@@ -179,7 +179,7 @@ Preserve these distinctions in final reports and future handoffs. Read the live 
 
 ## 8. Session of 26 October 2026 — review and embedded Mimoto wallet
 
-- The user explicitly chose to integrate the real Inji wallet through Mimoto into the workbench. See [implementation review](context/IMPLEMENTATION_REVIEW.md) for the audit and remaining gaps.
+- The user explicitly chose to integrate the real Inji wallet through Mimoto into the workbench. See [implementation review](IMPLEMENTATION_REVIEW.md) for the audit and remaining gaps.
 - Added `INJI_MIMOTO`, served at the existing HTTPS origin under `/playground/`: wallet login return, creation/unlock, PKCE issuance, authenticated storage receipt, verifier/credential review and explicit presentation approval. Standalone Inji Web remains an external option. Identity-provider sign-in still redirects normally.
 - New backend services are in `server/services/mimoto-wallet`; session models/DAO remain in `server/models`; focused React controls are in `client/src/components/mimoto-wallet`. Mimoto retains wallet keys and persistent storage. Its session cookies and CSRF protections remain enabled.
 - Added the workbench callback to realm rendering and the additive `local/update-wallet-client.mjs` migration for existing realms. Login success routes through `/playground/login-return`, returning standalone users to `/user/passcode`.
@@ -220,7 +220,7 @@ Server/client builds and client lint passed in Docker (host node_modules had bro
 
 ## Follow-up bug review — 26 October 2026
 
-Fixed the actual JSON-LD happy-path descriptor mismatch in the pinned Mimoto implementation, strengthened negative-scenario attribution and independent checks, corrected NOT_APPLICABLE credential-status reporting, surfaced detailed errors in the workbench/inspector, retained non-JSON failure evidence, prevented stale UI status overwrites, and added backend result collection with retry/error persistence and submission-capture ordering. No new test cases or public deployment were added. Current implementation and manual evidence are in the final section of [LIVE_VALIDATION.md](context/LIVE_VALIDATION.md). Normal and bad-signature replay both passed their respective expectations on the final images without client polling. The wrong-nonce upstream acceptance gap remains a visible failed scenario. This work changed the active `Documents/MOSIP-Decode` checkout, not the older mounted-volume copy. Existing uncommitted changes and persistent stack data were preserved.
+Fixed the actual JSON-LD happy-path descriptor mismatch in the pinned Mimoto implementation, strengthened negative-scenario attribution and independent checks, corrected NOT_APPLICABLE credential-status reporting, surfaced detailed errors in the workbench/inspector, retained non-JSON failure evidence, prevented stale UI status overwrites, and added backend result collection with retry/error persistence and submission-capture ordering. No new test cases or public deployment were added. Current implementation and manual evidence are in the final section of [LIVE_VALIDATION.md](LIVE_VALIDATION.md). Normal and bad-signature replay both passed their respective expectations on the final images without client polling. The wrong-nonce upstream acceptance gap remains a visible failed scenario. This work changed the active `Documents/MOSIP-Decode` checkout, not the older mounted-volume copy. Existing uncommitted changes and persistent stack data were preserved.
 
 ## Live browser validation — 29 October 2026 (Claude Code)
 
