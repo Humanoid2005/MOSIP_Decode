@@ -159,7 +159,7 @@ Validated on macOS (Apple silicon) with Colima 6 CPU / 12 GiB, a freshly created
 | `stop` interrupted after its first step (state file removed by hand) | `status` reported the unfinished stop and the tunnel origin still applied; `stop` again moved Certify and every realm redirect back to the local origin |
 | Public listener probed with `;` path parameters, `..;/` and bare `/v1/mimoto/actuator` | Mimoto answered its own 401 (and the actuator index 200) before the fix; every probe now returns 404 from nginx, wallet paths unchanged |
 | Final round on the finished code | 8/8 checks; SD-JWT `2fd6b5f8` PASS; JSON-LD `206d749f` issued and request authenticated; local mock-wallet runs: normal `18de3481` PASS, bad signature `e5096e25` PASS, wrong nonce `c996928c` FAIL (pinned Verify accepts it, as recorded above) |
-| Workbench through Playwright (`7704c19b`) | Offer QR, verifier QR, PASS result and inspector captured in `screenshots/`; report in [evidence](evidence/mobile-sd-jwt-2026-10-28.json) |
+| Workbench through Playwright (`7704c19b`) | Offer QR, verifier QR, PASS result and inspector captured (re-captured on 31 October, below); report in [evidence](evidence/mobile-sd-jwt-2026-10-28.json) |
 
 Found and fixed during validation:
 
@@ -233,3 +233,17 @@ Two client fixes were made during this check:
 - A run that was resumed after a page reload (for example, on return from Keycloak) is now pinned as the selection. Previously, the workbench dropped it and its result when the run stopped being active. This was checked by reloading mid-run and then cancelling.
 
 Docker Desktop's VM memory is set to 12 GB on a 15.6 GB host, and in-container image builds were OOM-killed twice. The new client build was therefore compiled on the host and copied into the running `playground-client` container. The client image itself still needs a rebuild before this deployment survives container recreation.
+
+## After merging the review and mobile work — 31 October 2026
+
+The review fixes and mobile mode were merged with the 29 October layout change; mobile mode now lives in `infra/inji/scripts/mobile.mjs`. The stack was rebuilt with `npm start` on the existing volumes, including the Keycloak image from `infra/inji/images/keycloak` and the client image, so the 29 October client fixes are now in the image. All services reported healthy.
+
+| Check | Result |
+| --- | --- |
+| Mock wallet, SD-JWT | Normal `93cf58e8` VALID / PASS; bad signature `4a8342cb` and modified claim `47193725` INVALID / scenario PASS; wrong type `bafe0ca5`, format mismatch `35de2d04`, proof mismatch `9730301c` and wrong nonce `a7a3117a` VALID / scenario FAIL, because pinned Verify accepts them as before |
+| `mobile.mjs start` on a new tunnel | 8/8 readiness checks |
+| Rehearsal | SD-JWT `6584a138` VALID / PASS; JSON-LD `d6374cae` issued and verifier request authenticated |
+| Workbench through Playwright (`238ffec5`) | VALID / PASS; the six screenshots in `screenshots/` re-captured; the sequence dialog draws the run with an Inji Mobile lane and logs no browser errors |
+| `stop` | Local origin restored; normal run `4d8cdd64` PASS; Inji Web and the HTTPS workbench return 200 |
+
+A scan with a physical phone is still not validated.
