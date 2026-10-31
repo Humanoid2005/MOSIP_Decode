@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InjiWallet } from "../../models/mimoto";
 import { mimotoApi } from "../../services/mimoto-wallet/MimotoApi";
 import { ErrorNotice } from "../ui";
@@ -14,6 +14,7 @@ export function WalletUnlock({
   const [pin, setPin] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const walletId = selected || wallets[0]?.walletId;
+  const queryClient = useQueryClient();
   const unlock = useMutation({
     mutationFn: async () => {
       const value = pin;
@@ -27,6 +28,8 @@ export function WalletUnlock({
       return wallet.walletId;
     },
     onSuccess: onUnlocked,
+    onError: () =>
+      void queryClient.invalidateQueries({ queryKey: ["mimoto-wallets"] }),
   });
   return (
     <form

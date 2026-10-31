@@ -162,6 +162,28 @@ function holderBindingConfirmed(
   );
 }
 
+// The independent playground check each verifier-side scenario deliberately
+// breaks. Its failure proves the mutation reached the verifier.
+const scenarioTargets: Partial<Record<ScenarioId, string>> = {
+  WRONG_NONCE: "nonce",
+  WRONG_TYPE: "requested-claims",
+  FORMAT_MISMATCH: "requested-format",
+  PROOF_MISMATCH: "requested-proof",
+};
+const bindingChecks = [
+  "state",
+  "definition",
+  "nonce",
+  "audience",
+  "issued-format",
+  "descriptor-id",
+  "descriptor-path",
+  "requested-format",
+  "requested-proof",
+  "requested-claims",
+  "result-correlation",
+];
+
 export function scenarioOutcome(
   run: Pick<
     TestRun,
@@ -194,31 +216,26 @@ export function scenarioOutcome(
       : "INCONCLUSIVE";
   if (run.verification?.upstreamAccepted) return "FAIL";
   const checks = run.verification?.checks;
+  const target = scenarioTargets[run.scenario];
   if (
     !run.credentialObserved ||
     !run.holderConfirmed ||
     !holderBindingConfirmed(checks) ||
-    ![
-      "state",
-      "definition",
-      "nonce",
-      "audience",
-      "issued-format",
-      "descriptor-id",
-      "descriptor-path",
-      "requested-format",
-      "requested-proof",
-      "requested-claims",
-      "result-correlation",
-    ].every((id) => checkStatus(checks, id) === "PASS")
+    !bindingChecks.every(
+      (id) => checkStatus(checks, id) === (id === target ? "FAIL" : "PASS"),
+    )
   )
     return "INCONCLUSIVE";
   const allowedFailures =
-    run.scenario === "EXPIRED_CREDENTIAL"
-      ? ["expiry"]
-      : run.scenarioEvidence.target === "PRESENTATION_SIGNATURE"
-        ? ["holder-proof"]
-        : ["issuer-signature", "holder-proof"];
+    run.scenario === "WRONG_NONCE"
+      ? ["nonce", "holder-proof"]
+      : target
+        ? [target]
+        : run.scenario === "EXPIRED_CREDENTIAL"
+          ? ["expiry"]
+          : run.scenarioEvidence.target === "PRESENTATION_SIGNATURE"
+            ? ["holder-proof"]
+            : ["issuer-signature", "holder-proof"];
   if (
     checks?.some(
       (check) => check.status === "FAIL" && !allowedFailures.includes(check.id),
@@ -227,6 +244,21 @@ export function scenarioOutcome(
     return "INCONCLUSIVE";
   const signature = checks?.find((check) => check.id === "issuer-signature");
   const holder = checks?.find((check) => check.id === "holder-proof");
+  // The rejection is only attributed to the mutation when Inji found nothing
+  // else wrong with the credential; unchecked results (an outage) are not enough.
+  if (target)
+    return run.credentialMatched &&
+      signature?.status === "PASS" &&
+      checkStatus(checks, "expiry") === "PASS" &&
+      ["PASS", "NOT_APPLICABLE"].includes(
+        checkStatus(checks, "credential-status"),
+      ) &&
+      (holder?.status === "PASS" ||
+        (run.scenario === "WRONG_NONCE" && holder?.status === "FAIL")) &&
+      (run.scenario === "WRONG_NONCE" ||
+        run.scenarioEvidence.matchingMismatchConfirmed)
+      ? "PASS"
+      : "INCONCLUSIVE";
   if (run.scenario === "EXPIRED_CREDENTIAL")
     return run.credentialMatched &&
       signature?.status === "PASS" &&

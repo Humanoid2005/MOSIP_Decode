@@ -16,23 +16,25 @@ export function useEnvironment() {
     staleTime: Infinity,
   });
 }
+const finishedPhases = ["COMPLETED", "FAILED", "CANCELLED"];
 export function useCurrentRun() {
   const selected = useWorkspace((state) => state.selectedRunId);
-  const runs = useRuns();
-  const active = runs.data?.find((run) =>
-    ["ISSUING", "HELD", "VERIFYING"].includes(run.phase),
-  );
-  const id = selected ?? active?.id;
   const select = useWorkspace((state) => state.selectRun);
-  // Keep a resumed run selected after it finishes, so its result stays visible.
+  const runs = useRuns();
+  const activeId = runs.data?.find((run) =>
+    ["ISSUING", "HELD", "VERIFYING"].includes(run.phase),
+  )?.id;
+  // Pin the active run so its result stays on screen after it finishes.
   useEffect(() => {
-    if (!selected && active) select(active.id);
-  }, [selected, active, select]);
+    if (!selected && activeId) select(activeId);
+  }, [selected, activeId, select]);
+  const id = selected ?? activeId;
   return useQuery({
     queryKey: ["run", id],
     queryFn: () => api.run(id!),
     enabled: Boolean(id),
-    refetchInterval: id ? 4000 : false,
+    refetchInterval: (query) =>
+      finishedPhases.includes(query.state.data?.phase ?? "") ? false : 4000,
   });
 }
 export function useRunAction() {

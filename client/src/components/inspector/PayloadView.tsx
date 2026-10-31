@@ -4,6 +4,7 @@ import { Copy, Expand, X } from "lucide-react";
 import type { ProtocolEvent } from "../../models/playground";
 import { decodePayload } from "../../services/decodePayload";
 import { cn } from "../../services/cn";
+import { copyText } from "../../services/clipboard";
 export function PayloadView({ event }: { event: ProtocolEvent }) {
   const [side, setSide] = useState<"request" | "response">("response");
   const [decoded, setDecoded] = useState(false);
@@ -19,8 +20,7 @@ export function PayloadView({ event }: { event: ProtocolEvent }) {
             className="btn-secondary"
             aria-label="Copy selected payload"
             onClick={() => {
-              navigator.clipboard
-                .writeText(text)
+              copyText(text)
                 .then(() => setMessage("Payload copied."))
                 .catch(() =>
                   setMessage("Clipboard unavailable. Select the JSON to copy."),

@@ -140,6 +140,38 @@ Server TypeScript, client ESLint/TypeScript/Vite and the pinned Java wallet buil
 
 Pinned Inji Verify still accepts the diagnostic SD-JWT wrong-nonce submission (run `7640db4e-5966-4990-83a3-0703315c5cb5`). The playground's independent nonce check fails and the report is FAIL / Unexpected acceptance. Existing upstream format/type/proof acceptance gaps with the diagnostic holder are not reclassified as passes. The unsupported-DID fixture's generic wallet error remains inconclusive unless a precise rejection reason is observed. Earlier intermittent issuer HTTP 400 failures did not recur after the wallet rebuild; no definitive root cause is claimed for them. History remains in memory and the single active run is global to this local development workbench.
 
+## Inji Mobile mode — 28 October 2026
+
+Validated on macOS (Apple silicon) with Colima 6 CPU / 12 GiB, a freshly created stack, Certify 0.14.0, Mimoto 0.21.0 and Verify 0.17.0, and five real Cloudflare quick tunnels. The Inji Mobile 0.22.1 behaviour reproduced by the simulator was taken from the wallet, `inji-vci-client` 0.7.0 and `inji-openid4vp` 0.7.0 sources; Certify's proof validator at v0.14.0 accepts the wallet's proof without `iss`.
+
+| Check | Result |
+| --- | --- |
+| Baseline stack before changes | All services healthy; Certify advertises one authorization server (the Keycloak realm) |
+| `mobile.mjs start`, first tunnel | 8/8 readiness checks over the public URL after one fix (below); about one minute |
+| Rehearsal, SD-JWT (`c2cd5bf1`) | Offer scanned, Keycloak sign-in with client `wallet`, credential through the bridge, did:web-authenticated request, Verify VALID, outcome PASS |
+| Rehearsal, JSON-LD (`699ab96f`) | Credential issued (context fetched back through the tunnel) and correlated; verifier request authenticated |
+| `start` again on the same tunnel | Idempotent, 8/8 checks |
+| `stop` | Issuer, authorization server, verifier DID, database DIDs, embedded wallet and Inji Web restored; tunnel removed |
+| Rehearsal on the restored local origin (`a4f6cb60`) | VALID / PASS |
+| `start` on a new tunnel | Identity moved from the local origin to the new URL; 8/8 checks; SD-JWT `7222d585` PASS; JSON-LD `42d3751f` issued and request authenticated |
+| Tunnel dropped by Cloudflare after about seven hours | `status` reports the unreachable URL; `start` recreated the tunnel and moved the identity to the new URL in about a minute; 8/8 checks; SD-JWT `717c886b` PASS; JSON-LD `76c77e14` issued and request authenticated; `start` again kept the same tunnel and URL |
+| `start` with Keycloak stopped; `start --origin https://x.example/` | Both refused before writing any state or starting a tunnel |
+| `stop` interrupted after its first step (state file removed by hand) | `status` reported the unfinished stop and the tunnel origin still applied; `stop` again moved Certify and every realm redirect back to the local origin |
+| Public listener probed with `;` path parameters, `..;/` and bare `/v1/mimoto/actuator` | Mimoto answered its own 401 (and the actuator index 200) before the fix; every probe now returns 404 from nginx, wallet paths unchanged |
+| Final round on the finished code | 8/8 checks; SD-JWT `2fd6b5f8` PASS; JSON-LD `206d749f` issued and request authenticated; local mock-wallet runs: normal `18de3481` PASS, bad signature `e5096e25` PASS, wrong nonce `c996928c` FAIL (pinned Verify accepts it, as recorded above) |
+| Workbench through Playwright (`7704c19b`) | Offer QR, verifier QR, PASS result and inspector captured in `screenshots/`; report in [evidence](evidence/mobile-sd-jwt-2026-10-28.json) |
+
+Found and fixed during validation:
+
+- The `wallet` client registered in an existing realm lacked the realm's `basic` scope, so tokens had no `sub` and Certify returned `invalid_token` ("The sub claim is not valid"). Mobile mode now assigns default and credential scopes on every start.
+- The public listener answered `POST /v1/verify/vp-request` with a 301 to a bridged path. Both forms of the request-creation path now return 404.
+- Moving the configuration back to an earlier origin silently kept the newer one; rebasing now starts from the current origin. Covered by a unit test.
+- After the tunnel dropped, `start` reused the dead URL from the old tunnel log and `status` printed eight fetch failures. `start` now keeps only a URL that answers and otherwise recreates the tunnel; `status` explains the drop.
+- A `start` or `stop` that failed partway could not be repaired by rerunning it, because the next run took its starting origin from the state file. Switching now starts from the origin last applied to Certify and the realm, both commands wait for a healthy database and Keycloak, and `--origin` is validated before anything is written. A new readiness check reads the DID Certify signs with from its database.
+- Mimoto was published although a stock Inji Mobile reads its settings and trusted verifiers from the backend built into the app. It is now local only; the app instead asks the user once to trust the issuer and the verifier, which the workbench and README now say.
+
+Not yet validated: a scan with a physical Android phone running Inji Mobile 0.22.x, JSON-LD presentation from the app, and iOS. The rehearsal reproduces the documented wallet requests; it cannot prove app UI behaviour or on-device credential verification.
+
 ## Browser-driven mock-wallet journey — 29 October 2026
 
 The existing Compose volumes were restarted with images rebuilt from commit `59be5ed`, which includes the 27 October server, bridge and telemetry fixes. All 12 services reported healthy, and the wallet key initializer exited 0. API health, the localhost and HTTPS workbenches, Inji Web and issuer discovery returned HTTP 200. Discovery listed `FarmerCredential`, `FarmerCredentialSdJwt` and both fixture configurations.

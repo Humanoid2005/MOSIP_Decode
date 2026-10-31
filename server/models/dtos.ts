@@ -30,7 +30,7 @@ export interface CredentialConfiguration {
 export interface ProtocolEvent {
   id: string;
   timestamp: string;
-  source: "HTTP" | "PROXY" | "USER" | "WALLET" | "SCENARIO";
+  source: "HTTP" | "PROXY" | "USER" | "WALLET" | "SCENARIO" | "PLAYGROUND";
   title: string;
   method: string;
   endpoint: string;
@@ -38,6 +38,7 @@ export interface ProtocolEvent {
   durationMs: number;
   request: unknown;
   response: unknown;
+  repeats?: number;
 }
 export interface TestRun {
   scenario: ScenarioId;
@@ -69,3 +70,11 @@ export interface TestRun {
   submittedFingerprints?: string[];
   issuedCredentialFacts?: { format: string; types: string[]; proof: string };
 }
+export type RunSummary = Omit<
+  TestRun,
+  | "events"
+  | "result"
+  | "offerUri"
+  | "presentationUri"
+  | "credentialFingerprints"
+> & { eventCount: number };

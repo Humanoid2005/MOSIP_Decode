@@ -10,7 +10,8 @@ export class AssetRenderer {
   }
 
   async render(output) {
-    const { origin, issuerDid, verifierDid, localOrigin, values } = this.config;
+    const { origin, issuerDid, verifierDid, localOrigin, values, mobile } =
+      this.config;
     const source = resolve(root, "infra/inji/upstream/config");
     const destination = resolve(output, "config");
     const publicPath = resolve(output, "public");
@@ -182,8 +183,12 @@ export class AssetRenderer {
       INJI_ISSUER_URL: origin,
       INJI_VERIFY_URL: localOrigin + "/v1/verify",
       INJI_MIMOTO_URL: localOrigin + "/v1/mimoto",
-      INJI_WEB_URL: origin,
-      INJI_EMBEDDED_WALLET_URL: values.INJI_LOCAL_DEVELOPMENT === "true" ? origin + "/playground" : "",
+      // The public tunnel serves wallet protocols only, so browser wallets are disabled in mobile mode.
+      INJI_WEB_URL: mobile ? "" : origin,
+      INJI_EMBEDDED_WALLET_URL:
+        values.INJI_LOCAL_DEVELOPMENT === "true" && !mobile
+          ? origin + "/playground"
+          : "",
       INJI_AUTHORIZATION_URL: values.AUTHORIZATION_ISSUER_URL,
       INJI_VERIFIER_CLIENT_ID: verifierDid,
       INJI_PRESENTATION_DEFINITION_IDS: Object.entries(definitionIds)
@@ -195,6 +200,18 @@ export class AssetRenderer {
     await writeFile(
       resolve(output, "playground.env"),
       Object.entries(environment)
+        .map(([key, value]) => key + "=" + JSON.stringify(value))
+        .join("\n") + "\n",
+    );
+    // Compose reads the live public origin here so mobile mode never edits .env.
+    await writeFile(
+      resolve(output, "origin.env"),
+      Object.entries({
+        KC_HOSTNAME: origin + "/auth",
+        INJI_VP_SUBMISSION_BASE_URL: origin + "/v1/verify",
+        INJI_VERIFY_REDIRECT_URI: origin,
+        MIMOTO_URL: origin + "/v1/mimoto",
+      })
         .map(([key, value]) => key + "=" + JSON.stringify(value))
         .join("\n") + "\n",
     );

@@ -1,5 +1,12 @@
 import { AppError, object, requiredString } from "../errors.js";
 import type { TestRun } from "../../models/dtos.js";
+function verifierUrl(value: string, label: string, base?: string): URL {
+  try {
+    return new URL(value, base);
+  } catch {
+    throw new AppError(502, `Verifier returned an invalid ${label}.`);
+  }
+}
 export function presentationUri(
   payload: Record<string, unknown>,
   run: TestRun,
@@ -8,7 +15,7 @@ export function presentationUri(
     client_id: run.environment.verifierClientId,
   });
   if (typeof payload.requestUri === "string") {
-    const uri = new URL(payload.requestUri);
+    const uri = verifierUrl(payload.requestUri, "request URI");
     if (!["https:", "http:"].includes(uri.protocol))
       throw new AppError(502, "Verifier returned an invalid request URI.");
     query.set("request_uri", uri.toString());
@@ -25,8 +32,9 @@ export function presentationUri(
     if (details.presentationDefinitionUri)
       query.set(
         "presentation_definition_uri",
-        new URL(
+        verifierUrl(
           String(details.presentationDefinitionUri),
+          "presentation definition URI",
           `${run.environment.verifyUrl}/`,
         ).toString(),
       );

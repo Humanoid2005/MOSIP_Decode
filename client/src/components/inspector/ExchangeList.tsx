@@ -40,6 +40,9 @@ export function ExchangeList({
               <div className="mt-2 text-xs opacity-70">
                 {event.source} · {event.status || "—"} ·{" "}
                 <span className="tabular-nums">{event.durationMs} ms</span>
+                {event.repeats ? (
+                  <span className="tabular-nums"> · ×{event.repeats}</span>
+                ) : null}
               </div>
             </div>
           </button>

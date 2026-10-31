@@ -5,6 +5,19 @@ import type { ProxyCaptureService } from "./ProxyCaptureService.js";
 import { upstreamFailure } from "../telemetry/upstreamFailure.js";
 import { AppError } from "../errors.js";
 import { parsePayload, safeEndpoint } from "../telemetry/sanitize.js";
+function errorCode(body: unknown): string {
+  return body && typeof body === "object" && !Array.isArray(body)
+    ? String((body as Record<string, unknown>).error ?? "")
+    : "";
+}
+// A wallet can only retry a rejected proof with a fresh c_nonce from the
+// issuer. Certify 0.14 sends none and has no nonce endpoint.
+function retryable(body: unknown): boolean {
+  return (
+    ["invalid_proof", "invalid_nonce"].includes(errorCode(body)) &&
+    typeof (body as Record<string, unknown>).c_nonce === "string"
+  );
+}
 export class ProtocolProxy {
   constructor(
     private readonly environment: EnvironmentService,
@@ -69,34 +82,42 @@ export class ProtocolProxy {
       if (typeof req.headers[name] === "string")
         headers[name] = req.headers[name];
     const started = Date.now();
+    let upstream: globalThis.Response;
+    let bytes: Buffer;
     try {
-      const upstream = await fetch(url, {
+      upstream = await fetch(url, {
         method: req.method,
         headers,
         ...(req.method === "POST" ? { body: new Uint8Array(body) } : {}),
         redirect: "manual",
         signal: AbortSignal.timeout(20000),
       });
-      const chunks: Uint8Array[] = [];
-      let size = 0;
-      const reader = upstream.body?.getReader();
-      if (reader)
-        for (;;) {
-          const part = await reader.read();
-          if (part.done) break;
-          size += part.value.length;
-          if (size > 5 * 1024 * 1024) {
-            await reader.cancel();
-            throw new Error("Response too large");
-          }
-          chunks.push(part.value);
-        }
-      const bytes = Buffer.concat(chunks);
-      const responseBody = parsePayload(
-        bytes,
-        upstream.headers.get("content-type") || "",
+      bytes = await this.read(upstream);
+    } catch (error) {
+      const timedOut =
+        error instanceof DOMException && error.name === "TimeoutError";
+      const message = timedOut
+        ? "Protocol upstream did not respond in time."
+        : "Protocol upstream unavailable or response exceeded limits.";
+      this.observe(() =>
+        this.capture.capture(id, path, {
+          source: "PROXY",
+          title: `${role}: connection failure`,
+          endpoint: safeEndpoint(url),
+          method: req.method,
+          status: 0,
+          durationMs: Date.now() - started,
+          request,
+          response: { error: message },
+        }),
       );
-      const reason = upstreamFailure(responseBody);
+      throw new AppError(timedOut ? 504 : 502, message);
+    }
+    const responseBody = parsePayload(
+      bytes,
+      upstream.headers.get("content-type") || "",
+    );
+    this.observe(() => {
       this.capture.capture(id, path, {
         source: "PROXY",
         title: `${role}: ${path}`,
@@ -107,62 +128,77 @@ export class ProtocolProxy {
         request,
         response: responseBody,
       });
-      if (
-        id &&
-        role === "verify" &&
-        path.startsWith("/vp-submission/") &&
-        upstream.status >= 400 &&
-        upstream.status < 500 &&
-        upstream.status !== 429
-      )
-        this.scenarios.fail(
-          id,
-          "SUBMISSION",
-          "SUBMISSION_REJECTED",
-          `Verifier submission endpoint returned HTTP ${upstream.status}${reason ? `: ${reason}` : ""}. Inspect the response; a credential verdict was not inferred.`,
-        );
-      if (
-        id &&
-        role === "certify" &&
-        path === "/credential" &&
-        upstream.status >= 400 &&
-        upstream.status < 500 &&
-        upstream.status !== 429
-      )
-        this.scenarios.fail(
-          id,
-          "ISSUANCE",
-          "ISSUER_REJECTED",
-          `Issuer credential endpoint returned HTTP ${upstream.status}${reason ? `: ${reason}` : ""}. Inspect the captured response.`,
-        );
-      for (const name of [
-        "content-type",
-        "location",
-        "www-authenticate",
-        "retry-after",
-      ]) {
-        const value = upstream.headers.get(name);
-        if (value) res.setHeader(name, value);
+      this.judge(id, role, path, upstream.status, responseBody);
+    });
+    for (const name of [
+      "content-type",
+      "location",
+      "www-authenticate",
+      "retry-after",
+    ]) {
+      const value = upstream.headers.get(name);
+      if (value) res.setHeader(name, value);
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.status(upstream.status).end(bytes);
+  }
+
+  private async read(upstream: globalThis.Response): Promise<Buffer> {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = upstream.body?.getReader();
+    if (reader)
+      for (;;) {
+        const part = await reader.read();
+        if (part.done) break;
+        size += part.value.length;
+        if (size > 5 * 1024 * 1024) {
+          await reader.cancel();
+          throw new Error("Response too large");
+        }
+        chunks.push(part.value);
       }
-      res.setHeader("Cache-Control", "no-store");
-      res.status(upstream.status).send(bytes);
-    } catch {
-      this.capture.capture(id, path, {
-        source: "PROXY",
-        title: `${role}: connection failure`,
-        endpoint: safeEndpoint(url),
-        method: req.method,
-        status: 0,
-        durationMs: Date.now() - started,
-        request,
-        response: {
-          error: "Protocol upstream unavailable or response exceeded limits.",
-        },
-      });
-      throw new AppError(
-        502,
-        "Protocol upstream unavailable or response exceeded limits.",
+    return Buffer.concat(chunks);
+  }
+
+  // Fails the run on a definitive upstream rejection. Proof errors that come
+  // with a fresh c_nonce are left to the wallet to retry.
+  private judge(
+    id: string | undefined,
+    role: string,
+    path: string,
+    status: number,
+    body: unknown,
+  ): void {
+    if (!id || status < 400 || status >= 500 || status === 429) return;
+    const reason = upstreamFailure(body);
+    const detail = `HTTP ${status}${reason ? `: ${reason}` : ""}`;
+    if (role === "verify" && path.startsWith("/vp-submission/"))
+      this.scenarios.fail(
+        id,
+        "SUBMISSION",
+        "SUBMISSION_REJECTED",
+        `Verifier submission endpoint returned ${detail}. Inspect the response; a credential verdict was not inferred.`,
       );
+    if (
+      role === "certify" &&
+      path === "/credential" &&
+      !retryable(body)
+    )
+      this.scenarios.fail(
+        id,
+        "ISSUANCE",
+        "ISSUER_REJECTED",
+        `Issuer credential endpoint returned ${detail}. Inspect the captured response.`,
+      );
+  }
+
+  // Observation must never change what the wallet receives.
+  private observe(action: () => void): void {
+    try {
+      action();
+    } catch (error) {
+      console.error("Protocol bridge observer failed", error);
     }
   }
 }

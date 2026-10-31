@@ -7,10 +7,11 @@ services:
     build:
       context: ./infra/inji/images/keycloak
     command: [start-dev, --import-realm]
+    # KC_HOSTNAME follows the public origin, including mobile mode.
+    env_file: ./infra/inji/generated/origin.env
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Run npm run bootstrap}
-      KC_HOSTNAME: ${INJI_PUBLIC_ORIGIN}/auth
       KC_HTTP_RELATIVE_PATH: /auth
       KC_PROXY_HEADERS: xforwarded
       KC_HEALTH_ENABLED: "true"
@@ -120,3 +121,12 @@ services:
     depends_on:
       playground-server:
         condition: service_healthy
+
+  # Mobile mode only: publishes the gateway's allowlisted listener on a
+  # random *.trycloudflare.com HTTPS URL. Started by local/mobile.mjs.
+  tunnel:
+    image: cloudflare/cloudflared:2025.8.1
+    profiles: [mobile]
+    command: [tunnel, --no-autoupdate, --url, http://gateway:8088]
+    depends_on:
+      - gateway

@@ -3,14 +3,15 @@ WORKDIR /workspace/server
 COPY server/package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY server/ ./
-RUN npm run build
+RUN npm run build && npm test
 
 FROM node:22.22.0-bookworm-slim AS server
 ENV NODE_ENV=production
 WORKDIR /workspace/server
 COPY server/package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=server-build /workspace/server/dist ./dist
+USER node
 EXPOSE 8000
 CMD ["node", "dist/index.js"]
 

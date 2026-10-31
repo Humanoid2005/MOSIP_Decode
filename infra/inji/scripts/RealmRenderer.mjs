@@ -2,6 +2,9 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { secretsDirectory, playgroundOrigin } from "./Configuration.mjs";
 
+export const mobileClientId = "wallet";
+export const mobileRedirectUri = "io.mosip.residentapp.inji://oauthredirect";
+
 export class RealmRenderer {
   constructor(configuration) { this.config = configuration; }
   async render(output) {
@@ -36,6 +39,16 @@ export class RealmRenderer {
           defaultClientScopes: ["profile", "email", "basic"],
           optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
           protocolMappers: clientIdMapper("playground-mock-wallet"),
+        },
+        // Inji Mobile's credential-offer flow uses this fixed public client and app redirect.
+        {
+          clientId: mobileClientId, enabled: true, protocol: "openid-connect",
+          publicClient: true, standardFlowEnabled: true, directAccessGrantsEnabled: false,
+          redirectUris: [mobileRedirectUri],
+          attributes: { "pkce.code.challenge.method": "S256" },
+          defaultClientScopes: ["profile", "email", "basic"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
+          protocolMappers: clientIdMapper(mobileClientId),
         },
         {
           clientId: "inji-web-login", enabled: true, protocol: "openid-connect",

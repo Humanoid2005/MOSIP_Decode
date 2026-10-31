@@ -1,7 +1,6 @@
 import { ScenarioResult } from "./ScenarioResult";
 import { VerificationResult } from "./VerificationResult";
 import { ReplayPanel } from "./ReplayPanel";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ArrowRight, Download, ShieldCheck } from "lucide-react";
 import { api } from "../../api/PlaygroundApi";
@@ -20,20 +19,6 @@ import { MimotoWalletPanel } from "../mimoto-wallet/MimotoWalletPanel";
 export function RunStage({ run }: { run: TestRun }) {
   const action = useRunAction();
   const select = useWorkspace((state) => state.selectRun);
-  const queryClient = useQueryClient();
-  const refresh = useQuery({
-    queryKey: ["verification-status", run.id],
-    queryFn: async () => {
-      const result = await api.action(run.id, "refresh");
-      await queryClient.invalidateQueries({ queryKey: ["run", run.id] });
-      await queryClient.invalidateQueries({ queryKey: ["runs"] });
-      return result;
-    },
-    enabled: run.phase === "VERIFYING",
-    refetchInterval: (query) => (query.state.error ? false : 3000),
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
   const finished = ["COMPLETED", "FAILED", "CANCELLED"].includes(run.phase);
   return (
     <section className="panel overflow-hidden">
@@ -73,6 +58,13 @@ export function RunStage({ run }: { run: TestRun }) {
               </p>
               <WalletHandoff
                 uri={run.offerUri}
+                // Inji Mobile 0.22 scans offers in-app; it registers no offer deep link.
+                deepLink={run.wallet !== "INJI_MOBILE"}
+                instruction={
+                  run.wallet === "INJI_MOBILE"
+                    ? "In Inji Mobile, open Add card → Scan & Download Card, scan this code and trust the issuer. Sign in, then confirm receipt here once the card appears."
+                    : undefined
+                }
                 webUrl={
                   run.wallet === "INJI_WEB"
                     ? run.environment.webWalletUrl
@@ -118,6 +110,11 @@ export function RunStage({ run }: { run: TestRun }) {
             {!["MOCK_WALLET", "INJI_MIMOTO"].includes(run.wallet) && (
               <WalletHandoff
                 uri={run.presentationUri}
+                instruction={
+                  run.wallet === "INJI_MOBILE"
+                    ? "In Inji Mobile, tap Scan, scan this code, trust the verifier and share the card."
+                    : undefined
+                }
                 webPresentationUrl={
                   run.wallet === "INJI_WEB"
                     ? webPresentationUrl(
@@ -128,14 +125,13 @@ export function RunStage({ run }: { run: TestRun }) {
                 }
               />
             )}
-            <ErrorNotice error={refresh.error} />
-            {refresh.error ? (
+            {run.error ? (
               <button
                 className="btn-secondary"
-                onClick={() => void refresh.refetch()}
-                disabled={refresh.isFetching}
+                onClick={() => action.mutate({ id: run.id, action: "refresh" })}
+                disabled={action.isPending}
               >
-                Retry status check
+                Check status now
               </button>
             ) : (
               <p role="status" className="text-sm text-slate-500">

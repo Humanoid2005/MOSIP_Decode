@@ -45,12 +45,8 @@ export class VerificationService {
         this.recordError(id, error);
         throw error;
       }
-      this.scenarios.fail(
-        id,
-        "REQUEST",
-        "REQUEST_FAILED",
-        error instanceof Error ? error.message : "Presentation request failed.",
-      );
+      if (!(error instanceof AppError)) throw error;
+      this.scenarios.fail(id, "REQUEST", "REQUEST_FAILED", error.message);
       return this.dao.get(id);
     } finally {
       this.busy.delete(id);
@@ -180,13 +176,19 @@ export class VerificationService {
         this.recordError(id, error);
         throw error;
       }
+      if (!(error instanceof AppError)) {
+        // A playground defect is not a verifier verdict; keep the run retryable.
+        this.recordError(
+          id,
+          new Error("Unexpected error while collecting the result. Retrying."),
+        );
+        throw error;
+      }
       this.scenarios.fail(
         id,
         "VERIFICATION",
         "VERIFIER_RESPONSE_ERROR",
-        error instanceof Error
-          ? error.message
-          : "Unable to interpret verifier response.",
+        error.message,
       );
       return this.dao.get(id);
     } finally {

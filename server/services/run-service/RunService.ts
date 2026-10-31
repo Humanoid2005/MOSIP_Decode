@@ -22,9 +22,7 @@ export class RunService {
     private readonly offers: OfferService,
   ) {}
   active(): TestRun | undefined {
-    return this.dao
-      .all()
-      .find((run) => ["ISSUING", "HELD", "VERIFYING"].includes(run.phase));
+    return this.dao.active();
   }
   isBusy(): boolean {
     return this.starting || Boolean(this.active());
@@ -152,15 +150,20 @@ export class RunService {
       this.dao.save(run);
       try {
         await this.issuer.discover(environment, run.id);
-        if (typeof input.offer === "string" && input.offer.trim()) {
-          const resolved = await this.offers.resolve(input.offer, run);
+        const supplied = typeof input.offer === "string" && input.offer.trim();
+        if (supplied || run.wallet === "INJI_MOBILE") {
+          const resolved = supplied
+            ? await this.offers.resolve(input.offer as string, run)
+            : this.offers.authorizationCodeOffer(run);
           const latest = this.dao.get(run.id);
           if (latest.phase !== "ISSUING") return latest;
           latest.offerUri = resolved.uri;
           this.dao.save(latest);
           this.telemetry.record(run.id, {
-            source: "USER",
-            title: "Issuer-provided credential offer",
+            source: supplied ? "USER" : "PLAYGROUND",
+            title: supplied
+              ? "Issuer-provided credential offer"
+              : "Credential offer for Inji Mobile (authorization code, built from issuer metadata)",
             method: "",
             endpoint: "",
             status: 0,
@@ -174,10 +177,11 @@ export class RunService {
         if (latest.phase !== "ISSUING") return latest;
         latest.phase = "FAILED";
         latest.verdict = "ERROR";
+        if (!(error instanceof AppError)) console.error(error);
         latest.error =
-          error instanceof Error
+          error instanceof AppError
             ? error.message
-            : "Unable to initiate issuance.";
+            : "Unexpected server error while initiating issuance.";
         this.dao.save(latest);
       }
       this.telemetry.notify(run.id);
