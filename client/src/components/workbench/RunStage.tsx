@@ -118,7 +118,7 @@ export function RunStage({ run }: { run: TestRun }) {
                 uri={run.presentationUri}
                 instruction={
                   run.wallet === "INJI_MOBILE"
-                    ? "In Inji Mobile, tap Scan, scan this code, trust the verifier and share the card."
+                    ? "In Inji Mobile, open the Share tab, scan this code, trust the verifier and share the card."
                     : undefined
                 }
                 webPresentationUrl={

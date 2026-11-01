@@ -248,9 +248,25 @@ The review fixes and mobile mode were merged with the 29 October layout change; 
 
 A scan with a physical phone is still not validated.
 
+## Inji Mobile on a physical phone — 1 November 2026
+
+Mobile mode ran on a new quick tunnel with 8/8 readiness checks, and a rehearsal passed before the phone was used. The phone was an Android device running Inji Mobile; the gateway logged its `okhttp/4.12.0` client calling over a mobile network.
+
+| Check | Result |
+| --- | --- |
+| First phone run (`bfe243ce`), SD-JWT | Offer scanned, issuer trusted, `farmer` signed in through Keycloak, credential issued through the bridge and stored, verifier trusted and card shared from the **Share** tab. Inji Verify: VALID. Two playground checks failed: `sd-hash` and `result-correlation`. |
+| Cause | The app sends the SD-JWT `vp_token` as a JSON string, in quote marks. The playground hashed and fingerprinted it with the quotes; the app's own `sd_hash` was correct. |
+| Fix | The checks decode a JSON-encoded token, with a unit test that fails on the old code. The simulator now sends the token the way the app does. The workbench and `mobile.mjs` now name the app's **Share** tab instead of "Scan". |
+| Rehearsal with the app's encoding (`4d9f2d7c`) | VALID / PASS |
+| Second phone run (`2e588e58`), SD-JWT | VALID / **PASS**. Every check passes (credential status not applicable), issuance was observed and matched, and receipt was confirmed. Report in [evidence](evidence/mobile-phone-2026-11-01.json). |
+| Screenshots | Result, inspector and a new sequence-diagram screenshot from `2e588e58`; readiness and QR screenshots re-captured from simulated run `a8ad3979` with the new wording. |
+| `stop` | Local origin restored; the HTTPS workbench returns 200. |
+
+Still not validated: JSON-LD presentation from the app, the same-device deep link on a phone, and iOS.
+
 ## mDoc (ISO/IEC 18013-5) credential — 1 November 2026
 
-Validated on Linux x86_64 with Docker 29.9.2 and a freshly created stack (new volumes) on the local origin, Certify 0.14.0 (with the [backported holder-key fix](../infra/inji/images/certify/README.md#mdoc-holder-key-fix)), Mimoto 0.21.0 and Verify 0.17.0. The rehearsals used the Inji Mobile simulator directly against `https://inji.127.0.0.1.sslip.io` with `NODE_EXTRA_CA_CERTS` set to the local CA; no tunnel was needed.
+Validated on Linux x86_64 with Docker 29.9.2 and a freshly created stack (new volumes) on the local origin, Certify 0.14.0 (with the [backported holder-key fix](../infra/inji/images/certify/README.md#mdoc-holder-key-fix)), Mimoto 0.21.0 and Verify 0.17.0. The rehearsals used the Inji Mobile simulator directly against `https://inji.127.0.0.1.sslip.io` with `NODE_EXTRA_CA_CERTS` set to the local CA; no tunnel was needed. The phone run then used mobile mode on an HTTP/2 quick tunnel.
 
 | Check | Result |
 | --- | --- |
@@ -258,6 +274,8 @@ Validated on Linux x86_64 with Docker 29.9.2 and a freshly created stack (new vo
 | Rehearsal, mDoc (`3785a67e`) | Offer scanned, Keycloak sign-in with client `wallet`, `did:jwk:…#0` proof, mDoc through the bridge (observed and decoded), receipt confirmed, then Verify's direct credential check: INVALID, `ERR_GENERIC: Exception during Validation: A JSONObject text must begin with '{'`; outcome FAIL; [report](evidence/mobile-mdoc-2026-11-01.json) |
 | Inji Mobile's storage checks on the issued mDoc | Pass: COSE ES256 signature with the `x5chain` key, all 14 value digests, `issuing_country` IN equals certificate `C=IN`, doc type, validity (two years). MSO device key equals the simulated holder's P-256 key |
 | Same rehearsal with Certify's original 0.14.0 jar (`3eae8d3b`) | Issuance rejected: HTTP 400 `Failed to add proof to mDoc`; Certify log `Illegal base64 character 23` (`#`); [report](evidence/mobile-mdoc-unpatched-certify-2026-11-01.json). The patched image was then recreated |
+| Rehearsal over the tunnel (`36ce747f`) | Same result as `3785a67e` |
+| Physical Android phone, Inji Mobile (`baf94774`) | Offer scanned in the app (`okhttp/4.12.0`), Keycloak sign-in, token and `/credential` 200 through the bridge, mDoc observed and decoded; the user reported the card stored and readable in the app. Receipt confirmed, then Verify's direct check: INVALID, outcome FAIL. App version not noted |
 | Workbench API: mDoc with Inji Web; mDoc with a negative scenario | Both refused with the reason before a run starts |
 | Upgrade path: mDoc row and scope removed, then `npm run upgrade` | Row and scope recreated, scope optional on `inji-wallet` and `playground-mock-wallet`, earlier configurations unchanged, Certify restarted healthy. With the scope on the `wallet` client (as `mobile.mjs start` assigns it), rehearsal `593b7ed0` gave the same result |
 | Existing journeys after the change | SD-JWT `1a5bec86` and `9900d449` VALID / PASS; JSON-LD `1e5195b8` and `f9e48751` issued and verifier request authenticated |
@@ -269,6 +287,7 @@ Findings:
 - **Inji Web cannot receive mDoc.** Mimoto 0.21.0, 0.22.0 and 1.0.0-alpha.1 have credential format handlers for `ldp_vc`, `vc+sd-jwt` and `dc+sd-jwt` only; `CredentialFormatHandlerFactory.getHandler("mso_mdoc")` throws "Unsupported credential format" while building the credential request, before Certify is called. Established from source; the workbench refuses the combination.
 - **Inji Verify cannot verify mDoc.** Its OpenID4VP submission handles JSON-LD presentations and SD-JWT tokens only, and its credential check detects CWT and SD-JWT, then treats anything else as JSON-LD. The mDoc is therefore rejected with a JSON parsing error rather than an unsupported-format error. Unchanged up to `v1.0.0-alpha.1`, although its `vc-verifier` dependency has an `MSO_MDOC` verifier.
 - Certify sends `issuerAuth` as a tagged COSE_Sign1 (`#6.18`). The wallet's verifier accepts it; the playground's decoder initially did not, which left the first mDoc run (`0b3201a8`) unobserved. Fixed and covered by tests.
+- This network blocks QUIC (UDP), so the quick tunnel never connected (`failed to dial to edge with quic`). The tunnel service now reads `TUNNEL_TRANSPORT_PROTOCOL`, default `quic`; `TUNNEL_TRANSPORT_PROTOCOL=http2 node infra/inji/scripts/mobile.mjs start` connected over TCP 443, and `start` names this fix when QUIC fails.
 - The first JSON-LD issuance after startup (`e739c171`) failed once because Certify could not reach `w3id.org` for a JSON-LD context (`Network is unreachable`); the retry and later runs succeeded. Unrelated to this change.
 
-Not validated: a scan with a physical phone, so on-device storage and the app's rendering of the mDoc card are inferred from the reproduced checks and the documented display contract. The browser-login journeys (embedded Mimoto, mock wallet) were not repeated in this session; their server paths are unchanged and covered by the unit tests.
+Not validated: the Inji Mobile version, and a capture of the card's fields on the phone (checked by the user). The browser-login journeys (embedded Mimoto, mock wallet) were not repeated in this session; their server paths are unchanged and covered by the unit tests.

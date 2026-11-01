@@ -21,7 +21,7 @@ try {
     console.log("Workbench (this computer only): http://localhost:5173");
     report(checks);
     console.log(
-      "\nChoose Inji Mobile in the workbench. In the app: Add card → Scan & Download Card for issuance, Scan for verification.",
+      "\nChoose Inji Mobile in the workbench. In the app: Add card → Scan & Download Card for issuance, the Share tab for verification.",
     );
   } else if (command === "stop") {
     await mode.stop();

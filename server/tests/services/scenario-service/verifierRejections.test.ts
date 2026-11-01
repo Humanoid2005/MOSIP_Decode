@@ -9,6 +9,7 @@ import {
   decodeJwt,
 } from "../../../services/mock-wallet/jws.js";
 import { presentSdJwt } from "../../../services/mock-wallet/sdJwtPresentation.js";
+import { credentialFingerprint } from "../../../services/run-service/credentialFingerprint.js";
 import { presentationChecks } from "../../../services/run-service/PresentationChecks.js";
 import { ScenarioService } from "../../../services/scenario-service/ScenarioService.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
@@ -32,7 +33,11 @@ function verifiedRun(
     expiry?: VerificationCheck["status"];
     credentialStatus?: VerificationCheck["status"];
   },
-  options: { presentedNonce?: string; tamperState?: boolean } = {},
+  options: {
+    presentedNonce?: string;
+    tamperState?: boolean;
+    jsonEncoded?: boolean;
+  } = {},
 ) {
   const dao = new InMemoryRunDao();
   const holder = createHolderKey();
@@ -61,8 +66,9 @@ function verifiedRun(
     options.presentedNonce ??
     (scenario === "WRONG_NONCE" ? "wrong" : "nonce-1");
   const descriptor = (requested.input_descriptors as { id: string }[])[0]!;
-  const { checks } = presentationChecks(dao.get("run-1"), {
-    vp_token: presentSdJwt(credential, holder, verifierDid, nonce),
+  const presented = presentSdJwt(credential, holder, verifierDid, nonce);
+  const { checks, fingerprints } = presentationChecks(dao.get("run-1"), {
+    vp_token: options.jsonEncoded ? JSON.stringify(presented) : presented,
     state: options.tamperState ? "req-other" : "req-1",
     presentation_submission: JSON.stringify({
       id: "submission",
@@ -80,6 +86,8 @@ function verifiedRun(
     credentialObserved: true,
     credentialMatched: true,
     holderConfirmed: true,
+    credentialFingerprints: [credentialFingerprint(credential)],
+    submittedFingerprints: fingerprints,
     verification: {
       version: 1 as const,
       upstreamAccepted: verifier.accepted,
@@ -216,4 +224,10 @@ test("the normal flow still passes with a real presentation", () => {
     scenarioOutcome(verifiedRun("NONE", { accepted: true })),
     "PASS",
   );
+});
+
+test("a JSON-encoded SD-JWT vp_token, as Inji Mobile sends it, passes and matches", () => {
+  const run = verifiedRun("NONE", { accepted: true }, { jsonEncoded: true });
+  assert.equal(scenarioOutcome(run), "PASS");
+  assert.deepEqual(run.submittedFingerprints, run.credentialFingerprints);
 });

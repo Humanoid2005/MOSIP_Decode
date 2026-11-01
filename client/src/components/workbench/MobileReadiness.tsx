@@ -13,7 +13,7 @@ export function MobileReadiness({ issuerUrl }: { issuerUrl: string }) {
         Your phone reaches this issuer at{" "}
         <span className="font-mono break-all">{issuerUrl}</span>. Use Inji
         Mobile 0.22: <strong>Add card → Scan &amp; Download Card</strong> for
-        issuance, and <strong>Scan</strong> for verification.
+        issuance, and the <strong>Share</strong> tab for verification.
       </p>
     </div>
   ) : (

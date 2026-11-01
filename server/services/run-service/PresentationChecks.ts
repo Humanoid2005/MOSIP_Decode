@@ -50,7 +50,13 @@ export function presentationChecks(
       "Presentation definition ID",
       submission.definition_id === expected.definition.id,
     );
-    const token = request.vp_token;
+    // Inji Mobile sends a single SD-JWT as a JSON string ("…~…"); other wallets
+    // send it bare. Inji Verify accepts both.
+    const token =
+      typeof request.vp_token === "string" &&
+      request.vp_token.trim().startsWith('"')
+        ? JSON.parse(request.vp_token)
+        : request.vp_token;
     let credential: JsonObject;
     let actualFormat: string;
     let algorithm: unknown;
