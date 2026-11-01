@@ -20,6 +20,7 @@ export function RunStage({ run }: { run: TestRun }) {
   const action = useRunAction();
   const select = useWorkspace((state) => state.selectRun);
   const finished = ["COMPLETED", "FAILED", "CANCELLED"].includes(run.phase);
+  const mdoc = run.configuration.format === "mso_mdoc";
   return (
     <section className="panel overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5">
@@ -90,8 +91,9 @@ export function RunStage({ run }: { run: TestRun }) {
           <>
             <ShieldCheck size={36} className="text-teal-700" />
             <p className="text-sm leading-6 text-slate-500">
-              Wallet receipt has been confirmed. Request a presentation from
-              Inji Verify using your configured presentation definition.
+              {mdoc
+                ? "Wallet receipt has been confirmed. Inji Verify has no OpenID4VP path for mDoc, so the workbench sends the issued mDoc observed by the bridge to its credential check directly."
+                : "Wallet receipt has been confirmed. Request a presentation from Inji Verify using your configured presentation definition."}
             </p>
             <button
               className="btn-primary"
@@ -100,7 +102,11 @@ export function RunStage({ run }: { run: TestRun }) {
                 action.mutate({ id: run.id, action: "presentation" })
               }
             >
-              {action.isPending ? "Requesting…" : "Request verification"}
+              {action.isPending
+                ? "Requesting…"
+                : mdoc
+                  ? "Send mDoc to Inji Verify"
+                  : "Request verification"}
               <ArrowRight size={15} />
             </button>
           </>

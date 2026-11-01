@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { Configuration } from "../Configuration.mjs";
 import { AssetRenderer } from "../AssetRenderer.mjs";
 import { RealmRenderer } from "../RealmRenderer.mjs";
+import { DatabaseRenderer } from "../DatabaseRenderer.mjs";
 
 const base = "https://inji.127.0.0.1.sslip.io";
 const local = new Configuration({
@@ -69,4 +70,26 @@ test("new realms register Inji Mobile's public PKCE client", async () => {
   assert.deepEqual(client.redirectUris, ["io.mosip.residentapp.inji://oauthredirect"]);
   assert.equal(client.attributes["pkce.code.challenge.method"], "S256");
   assert.ok(client.optionalClientScopes.includes("mock_identity_vc_ldp"));
+});
+
+test("new realms offer the mDoc credential scope to every wallet client", async () => {
+  const output = await mkdtemp(join(tmpdir(), "inji-realm-"));
+  await mkdir(join(output, "database"));
+  await new RealmRenderer(local).render(output);
+  const realm = JSON.parse(await readFile(join(output, "keycloak/inji-realm.json"), "utf8"));
+  const scope = realm.clientScopes.find((item) => item.name === "mock_identity_vc_mdoc");
+  assert.ok(scope.protocolMappers.some((item) => item.protocolMapper === "inji-credential-nonce"));
+  for (const clientId of ["inji-wallet", "playground-mock-wallet", "wallet"])
+    assert.ok(
+      realm.clients.find((item) => item.clientId === clientId).optionalClientScopes.includes("mock_identity_vc_mdoc"),
+      clientId,
+    );
+});
+
+test("local seeds add the mDoc configuration after the earlier fixtures", async () => {
+  const output = await mkdtemp(join(tmpdir(), "inji-database-"));
+  await new DatabaseRenderer(local).render(output);
+  const certify = await readFile(join(output, "database/01-certify.sql"), "utf8");
+  assert.ok(certify.indexOf("'FarmerCredentialMdoc'") > certify.indexOf("'FarmerCredentialUnsupportedDid'"));
+  assert.match(certify, /'io\.mosip\.farmer\.1\.FarmerCredential', 'mso_mdoc'/);
 });

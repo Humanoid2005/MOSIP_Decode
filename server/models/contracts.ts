@@ -42,4 +42,13 @@ export interface VerifierAdapter {
     credentials: unknown[];
     verification: import("./verification.js").VerificationEvidence;
   }>;
+  // Direct credential check, for formats the verifier has no presentation flow for.
+  checkCredential(
+    run: TestRun,
+    credential: string,
+  ): Promise<{
+    verdict: "VALID" | "INVALID" | "EXPIRED";
+    payload: unknown;
+    verification: import("./verification.js").VerificationEvidence;
+  }>;
 }

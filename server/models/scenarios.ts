@@ -138,6 +138,8 @@ export function scenarioUnavailable(
 ): string | undefined {
   if (id === "QR_LIMIT")
     return "Local QR sizing is a UI policy, not a verifier rejection scenario.";
+  if (format === "mso_mdoc" && id !== "NONE")
+    return "Inji Verify cannot verify mDoc, so a negative scenario has no verifier decision to test.";
   if (id === "UNSUPPORTED_DID" && (format !== "ldp_vc" || !didFixtureAvailable))
     return "Requires the local FarmerCredentialUnsupportedDid JSON-LD issuer configuration.";
   if (id === "EXPIRED_CREDENTIAL" && (format !== "ldp_vc" || !fixtureAvailable))
@@ -150,6 +152,15 @@ export function scenarioUnavailable(
   )
     return "Use the embedded Inji wallet or mock wallet for a controlled, observable mutation.";
   return undefined;
+}
+// The mock wallet's SD-JWT-only restriction is enforced separately.
+export function mdocWalletUnsupported(
+  wallet: Wallet,
+  format: string,
+): string | undefined {
+  if (format !== "mso_mdoc" || !["INJI_WEB", "INJI_MIMOTO"].includes(wallet))
+    return undefined;
+  return "Mimoto 0.21 has no mso_mdoc format handler, so Inji Web cannot download mDoc credentials. Use Inji Mobile.";
 }
 function holderBindingConfirmed(
   checks: VerificationCheck[] | undefined,

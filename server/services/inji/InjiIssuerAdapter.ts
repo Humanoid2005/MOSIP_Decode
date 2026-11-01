@@ -30,7 +30,11 @@ export class InjiIssuerAdapter implements IssuerAdapter {
       supported,
     ).flatMap(([id, value]) => {
       const config = object(value);
-      if (!["ldp_vc", "vc+sd-jwt", "dc+sd-jwt"].includes(String(config.format)))
+      if (
+        !["ldp_vc", "vc+sd-jwt", "dc+sd-jwt", "mso_mdoc"].includes(
+          String(config.format),
+        )
+      )
         return [];
       const display = Array.isArray(config.display)
         ? config.display[0]

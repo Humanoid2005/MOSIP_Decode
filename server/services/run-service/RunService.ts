@@ -1,5 +1,6 @@
 import {
   expiredConfigurationId,
+  mdocWalletUnsupported,
   unsupportedDidConfigurationId,
   scenarios,
   scenarioUnavailable,
@@ -114,6 +115,11 @@ export class RunService {
         (!environment.embeddedWalletUrl || !environment.mimotoUrl)
       )
         throw new AppError(409, "The embedded Inji wallet is not configured.");
+      const mdocUnsupported = mdocWalletUnsupported(
+        input.wallet as TestRun["wallet"],
+        configuration.format,
+      );
+      if (mdocUnsupported) throw new AppError(422, mdocUnsupported);
       if (input.wallet === "INJI_MIMOTO" && configuration.format !== "ldp_vc")
         throw new AppError(
           422,

@@ -28,7 +28,7 @@ export class RealmRenderer {
           redirectUris: [origin + "/redirect", origin + "/playground/wallet-callback", "io.mosip.residentapp.inji://oauthredirect"],
           attributes: { "jwt.credential.certificate": certificate, "use.jwks.url": "false" },
           defaultClientScopes: ["profile", "email", "basic"],
-          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did", "mock_identity_vc_mdoc"],
           protocolMappers: clientIdMapper("inji-wallet"),
         },
         {
@@ -37,7 +37,7 @@ export class RealmRenderer {
           redirectUris: [playgroundOrigin + "/api/v1/mock-wallet/callback"],
           attributes: { "pkce.code.challenge.method": "S256" },
           defaultClientScopes: ["profile", "email", "basic"],
-          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did", "mock_identity_vc_mdoc"],
           protocolMappers: clientIdMapper("playground-mock-wallet"),
         },
         // Inji Mobile's credential-offer flow uses this fixed public client and app redirect.
@@ -47,7 +47,7 @@ export class RealmRenderer {
           redirectUris: [mobileRedirectUri],
           attributes: { "pkce.code.challenge.method": "S256" },
           defaultClientScopes: ["profile", "email", "basic"],
-          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did"],
+          optionalClientScopes: ["mock_identity_vc_ldp", "mock_identity_vc_sd_jwt", "mock_identity_vc_expired", "mock_identity_vc_unsupported_did", "mock_identity_vc_mdoc"],
           protocolMappers: clientIdMapper(mobileClientId),
         },
         {
@@ -67,6 +67,7 @@ export class RealmRenderer {
         credentialScope("mock_identity_vc_sd_jwt"),
         credentialScope("mock_identity_vc_expired"),
         credentialScope("mock_identity_vc_unsupported_did"),
+        credentialScope("mock_identity_vc_mdoc"),
       ],
       users: [{ id: "2154189532", username: "farmer", enabled: true, emailVerified: true, email: "farmer@example.test", firstName: "Gorge", lastName: "Cooper", credentials: [{ type: "password", value: values.LOCAL_FARMER_PASSWORD, temporary: false }] }],
     };

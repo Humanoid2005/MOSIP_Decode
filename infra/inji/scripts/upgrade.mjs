@@ -1,5 +1,6 @@
-// Brings volumes created before the workbench callback, self-registration and negative
-// scenarios up to date. Every step is additive and safe to rerun; fresh volumes need none of it.
+// Brings volumes created before the workbench callback, self-registration, negative
+// scenarios and the mDoc credential up to date. Every step is additive and safe to rerun;
+// fresh volumes need none of it.
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -27,6 +28,7 @@ try {
     "006-synthetic-farmer-registry.sql",
     "007-expired-credential.sql",
     "008-unsupported-did-credential.sql",
+    "009-farmer-mdoc-certify.sql",
   ].map(migration))).join("\n");
   exec("database", ["psql", "-U", "postgres", "-d", "inji_certify", "-v", "ON_ERROR_STOP=1"], sql);
 
@@ -42,7 +44,7 @@ try {
   const scopes = JSON.parse(admin("get", "client-scopes"));
   const normal = scopes.find((item) => item.name === "mock_identity_vc_ldp");
   if (!normal) throw new Error("The normal JSON-LD scope is missing.");
-  for (const name of ["mock_identity_vc_expired", "mock_identity_vc_unsupported_did"]) {
+  for (const name of ["mock_identity_vc_expired", "mock_identity_vc_unsupported_did", "mock_identity_vc_mdoc"]) {
     let scope = scopes.find((item) => item.name === name);
     if (!scope) {
       const mappers = (normal.protocolMappers ?? []).map(({ id, ...mapper }) => mapper);

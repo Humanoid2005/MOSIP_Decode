@@ -44,7 +44,8 @@ export class DatabaseRenderer {
         (this.config.values.INJI_LOCAL_DEVELOPMENT === "true"
           ? "\n" + (await migration("006-synthetic-farmer-registry.sql")) +
             "\n" + (await migration("007-expired-credential.sql")) +
-            "\n" + (await migration("008-unsupported-did-credential.sql"))
+            "\n" + (await migration("008-unsupported-did-credential.sql")) +
+            "\n" + (await migration("009-farmer-mdoc-certify.sql"))
           : ""),
     );
     await writeFile(

@@ -1,5 +1,6 @@
 import { Configuration } from "../Configuration.mjs";
 import { InjiMobileSimulator } from "./InjiMobileSimulator.mjs";
+import { walletMdocChecks } from "./MdocWalletCheck.mjs";
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 
@@ -28,8 +29,22 @@ export class Rehearsal {
     run = await this.call(`/runs/${run.id}`);
     this.log(`Issued over ${config.origin}; bridge observed the credential: ${run.credentialObserved}`);
     if (!run.credentialObserved) throw new Error("The bridge did not correlate the issued credential with this run.");
+    if (format === "mso_mdoc") {
+      const stored = walletMdocChecks(issued.credential);
+      this.log(`The wallet's mDoc checks passed for ${stored.docType} (signed by ${stored.certificate}).`);
+    }
     await this.call(`/runs/${run.id}/holder`, {});
     run = await this.call(`/runs/${run.id}/presentation`, {});
+    if (format === "mso_mdoc") {
+      // Inji Verify has no mDoc presentation path; the workbench checks the held mDoc directly.
+      const report = await this.call(`/runs/${run.id}/report`);
+      const signature = run.verification?.checks.find((check) => check.id === "issuer-signature");
+      this.log(
+        `Inji Verify verdict: ${run.verdict}${signature?.detail ? ` (${signature.detail})` : ""}${run.error ? ` (${run.error})` : ""}; interoperability outcome: ${report.outcome}`,
+      );
+      if (!["COMPLETED", "FAILED"].includes(run.phase)) throw new Error("Inji Verify returned no decision.");
+      return run.id;
+    }
     if (format === "ldp_vc") {
       await phone.authenticateRequest(run.presentationUri);
       await this.call(`/runs/${run.id}/cancel`, {});

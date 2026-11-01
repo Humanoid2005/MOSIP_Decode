@@ -31,7 +31,11 @@ export function runOutcome(run: TestRun | RunSummary): string {
       : "Issuing";
 }
 export function formatName(format: string): string {
-  return format === "ldp_vc" ? "W3C VC · JSON-LD" : "SD-JWT VC";
+  return format === "ldp_vc"
+    ? "W3C VC · JSON-LD"
+    : format === "mso_mdoc"
+      ? "mDoc · ISO 18013-5"
+      : "SD-JWT VC";
 }
 export function walletName(wallet: string): string {
   return wallet === "INJI_MIMOTO"

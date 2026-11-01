@@ -34,6 +34,7 @@ const credentialScopes = [
   "mock_identity_vc_sd_jwt",
   "mock_identity_vc_expired",
   "mock_identity_vc_unsupported_did",
+  "mock_identity_vc_mdoc",
 ];
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 // The origin last written to Certify's database and the realm. Switching always
@@ -190,13 +191,18 @@ export class MobileMode {
   }
 
   async waitForTunnel() {
+    let logs = "";
     for (let attempt = 0; attempt < 60; attempt++) {
-      const logs = this.compose("logs", "--no-color", "tunnel");
+      logs = this.compose("logs", "--no-color", "tunnel");
       const origin = tunnelOrigin(logs);
       if (origin && /Registered tunnel connection/.test(logs)) return origin;
       await pause(2000);
     }
-    throw new Error("The tunnel did not report a public URL. Check: docker compose logs tunnel");
+    throw new Error(
+      /failed to dial to edge with quic/.test(logs)
+        ? "The tunnel could not reach Cloudflare over QUIC (UDP), which this network appears to block. Retry over TCP: TUNNEL_TRANSPORT_PROTOCOL=http2 node infra/inji/scripts/mobile.mjs start"
+        : "The tunnel did not report a public URL. Check: docker compose logs tunnel",
+    );
   }
 
   // New quick-tunnel names can take a few seconds to appear in public DNS.

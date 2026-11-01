@@ -16,6 +16,7 @@ export class InMemoryRunDao implements RunDao {
           offerUri,
           presentationUri,
           credentialFingerprints,
+          issuedMdoc,
           ...run
         }) => ({ ...structuredClone(run), eventCount: events.length }),
       );

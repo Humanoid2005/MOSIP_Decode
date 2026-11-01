@@ -75,3 +75,96 @@ export function verifierIdentity() {
   };
   return { document, signRequest };
 }
+
+export type Cbor =
+  | number
+  | string
+  | boolean
+  | null
+  | Buffer
+  | Cbor[]
+  | Map<Cbor, Cbor>
+  | { tag: number; value: Cbor };
+function cborHead(major: number, length: number): Buffer {
+  if (length < 24) return Buffer.from([(major << 5) | length]);
+  if (length < 256) return Buffer.from([(major << 5) | 24, length]);
+  const head = Buffer.alloc(5);
+  head[0] = (major << 5) | 26;
+  head.writeUInt32BE(length, 1);
+  return head;
+}
+export function encodeCbor(value: Cbor): Buffer {
+  if (typeof value === "number")
+    return value >= 0 ? cborHead(0, value) : cborHead(1, -1 - value);
+  if (typeof value === "string") {
+    const bytes = Buffer.from(value);
+    return Buffer.concat([cborHead(3, bytes.length), bytes]);
+  }
+  if (typeof value === "boolean") return Buffer.from([value ? 0xf5 : 0xf4]);
+  if (value === null) return Buffer.from([0xf6]);
+  if (Buffer.isBuffer(value))
+    return Buffer.concat([cborHead(2, value.length), value]);
+  if (Array.isArray(value))
+    return Buffer.concat([cborHead(4, value.length), ...value.map(encodeCbor)]);
+  if (value instanceof Map)
+    return Buffer.concat([
+      cborHead(5, value.size),
+      ...[...value].flatMap(([key, item]) => [
+        encodeCbor(key),
+        encodeCbor(item),
+      ]),
+    ]);
+  return Buffer.concat([cborHead(6, value.tag), encodeCbor(value.value)]);
+}
+
+// Shaped like Certify 0.14's mso_mdoc response; the signature is not genuine.
+export function issueMdoc(
+  claims: Record<string, string> = {
+    fullName: "Demo Farmer",
+    issuing_country: "IN",
+  },
+  docType = "io.mosip.farmer.1.FarmerCredential",
+  tagged = false,
+): string {
+  const items = Object.entries(claims).map(([id, value], index) => ({
+    tag: 24,
+    value: encodeCbor(
+      new Map<Cbor, Cbor>([
+        ["digestID", index],
+        ["random", randomBytes(24)],
+        ["elementIdentifier", id],
+        ["elementValue", value],
+      ]),
+    ),
+  }));
+  const mso = new Map<Cbor, Cbor>([
+    ["version", "1.0"],
+    ["digestAlgorithm", "SHA-256"],
+    ["docType", docType],
+    [
+      "validityInfo",
+      new Map<Cbor, Cbor>([
+        ["validFrom", "2026-01-01T00:00:00Z"],
+        ["validUntil", "2028-01-01T00:00:00Z"],
+      ]),
+    ],
+  ]);
+  const issuerAuth: Cbor = [
+    encodeCbor(new Map<Cbor, Cbor>([[1, -7]])),
+    new Map<Cbor, Cbor>(),
+    encodeCbor({ tag: 24, value: encodeCbor(mso) }),
+    randomBytes(64),
+  ];
+  return encodeCbor(
+    new Map<Cbor, Cbor>([
+      ["docType", docType],
+      [
+        "issuerSigned",
+        new Map<Cbor, Cbor>([
+          ["nameSpaces", new Map<Cbor, Cbor>([["io.mosip.farmer.1", items]])],
+          ["issuerAuth", tagged ? { tag: 18, value: issuerAuth } : issuerAuth],
+        ]),
+      ],
+    ]),
+  ).toString("base64url");
+}

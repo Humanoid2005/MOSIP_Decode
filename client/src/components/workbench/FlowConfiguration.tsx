@@ -1,5 +1,6 @@
 import {
   expiredConfigurationId,
+  mdocWalletUnsupported,
   unsupportedDidConfigurationId,
   scenarioUnavailable,
 } from "../../../../server/models/scenarios";
@@ -71,8 +72,12 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
         ),
       )
     : undefined;
+  const mdoc = choice?.format === "mso_mdoc";
   const mockUnsupported =
-    wallet === "MOCK_WALLET" && choice?.format === "ldp_vc";
+    wallet === "MOCK_WALLET" && (choice?.format === "ldp_vc" || mdoc);
+  const mdocUnsupported = choice
+    ? mdocWalletUnsupported(wallet, choice.format)
+    : undefined;
   const mimotoUnsupported =
     wallet === "INJI_MIMOTO" && choice?.format !== "ldp_vc";
   const needsSecureWorkbench =
@@ -114,6 +119,7 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
               !scenarioError &&
               !mockUnsupported &&
               !mimotoUnsupported &&
+              !mdocUnsupported &&
               !needsSecureWorkbench &&
               !blocked &&
               !start.isPending
@@ -200,13 +206,16 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
             {scenarioError && (
               <p className="text-sm text-amber-700">{scenarioError}</p>
             )}
-            {mimotoUnsupported && (
+            {mdocUnsupported && (
+              <p className="text-sm text-slate-600">{mdocUnsupported}</p>
+            )}
+            {mimotoUnsupported && !mdoc && (
               <p className="text-sm text-slate-600">
                 This Mimoto release can present JSON-LD only. Choose a JSON-LD
                 credential, or the mock wallet for SD-JWT.
               </p>
             )}
-            {wallet === "INJI_WEB" && choice?.format !== "ldp_vc" && (
+            {wallet === "INJI_WEB" && choice?.format !== "ldp_vc" && !mdoc && (
               <p className="text-sm text-slate-600">
                 The pinned Inji Web can store SD-JWT but cannot present it. This
                 combination is useful for diagnosing that limitation.
@@ -216,6 +225,14 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
               <p className="text-sm text-slate-600">
                 The mock wallet supports SD-JWT credentials only. Choose an
                 SD-JWT credential or another wallet.
+              </p>
+            )}
+            {wallet === "INJI_MOBILE" && mdoc && (
+              <p className="text-sm text-slate-600">
+                Inji Verify has no OpenID4VP path for mDoc. After the card is in
+                Inji Mobile, the workbench sends the issued mDoc to Inji
+                Verify&apos;s credential check directly and records its
+                decision.
               </p>
             )}
             {wallet === "INJI_MOBILE" && (
@@ -233,8 +250,8 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
             )}
             {discovery.isSuccess && !options.length && (
               <p className="text-sm text-slate-600">
-                The issuer does not advertise a JSON-LD or SD-JWT configuration
-                supported by this adapter.
+                The issuer does not advertise a JSON-LD, SD-JWT or mDoc
+                configuration supported by this adapter.
               </p>
             )}
             {!["INJI_MIMOTO", "MOCK_WALLET"].includes(wallet) && (
@@ -288,7 +305,8 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
                   blocked ||
                   Boolean(scenarioError) ||
                   mockUnsupported ||
-                  mimotoUnsupported
+                  mimotoUnsupported ||
+                  Boolean(mdocUnsupported)
                 }
               >
                 {start.isPending ? "Starting…" : "Start issuance"}

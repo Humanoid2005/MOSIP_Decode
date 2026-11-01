@@ -97,7 +97,9 @@ export function buildSequence(run: TestRun): SequenceDiagram {
         `  Note over P,V: ${
           next === "issuance"
             ? "OpenID4VCI · credential issuance"
-            : "OpenID4VP · presentation and verification"
+            : run.configuration.format === "mso_mdoc"
+              ? "Direct mDoc credential check · Inji Verify has no OpenID4VP path for mDoc"
+              : "OpenID4VP · presentation and verification"
         }`,
       );
     }

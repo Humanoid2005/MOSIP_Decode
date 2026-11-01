@@ -10,8 +10,13 @@ export class ReportService {
   constructor(private readonly dao: RunDao) {}
 
   generate(id: string) {
-    const { offerUri, presentationUri, credentialFingerprints, ...run } =
-      this.dao.get(id);
+    const {
+      offerUri,
+      presentationUri,
+      credentialFingerprints,
+      issuedMdoc,
+      ...run
+    } = this.dao.get(id);
     const outcome = interoperabilityOutcome(run);
     return sanitize({
       reportVersion: 3,
@@ -30,6 +35,11 @@ export class ReportService {
         "Issuer result matching does not establish full protocol conformance.",
         "Inji verification results and independent playground request checks are reported separately. HTTP 200 is delivery, not acceptance.",
         "Request checks cover the supported single-credential presentation shapes only. Missing or unsupported evidence cannot produce a pass.",
+        ...(run.configuration.format === "mso_mdoc"
+          ? [
+              "Inji Verify has no OpenID4VP path for mso_mdoc. The playground sent the bridge-observed mDoc to its direct credential check; no presentation took place.",
+            ]
+          : []),
       ],
     });
   }

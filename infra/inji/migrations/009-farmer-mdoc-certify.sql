@@ -1,0 +1,28 @@
+BEGIN;
+-- ISO/IEC 18013-5 mDoc variant of the farmer credential. Certify's own mso_mdoc support builds the
+-- namespace, salts and digests the elements and COSE-signs the MSO with the existing ES256 (P-256) key.
+-- Wallets check issuing_country against the country of that key's certificate (IN).
+-- Copies the issuer DID, display and data-provider settings from the JSON-LD configuration.
+INSERT INTO certify.credential_config (
+    credential_config_key_id, config_id, status, vc_template, doctype, credential_format,
+    did_url, key_manager_app_id, key_manager_ref_id, signature_algo, signature_crypto_suite, display,
+    display_order, scope, cryptographic_binding_methods_supported,
+    credential_signing_alg_values_supported, proof_types_supported, mso_mdoc_claims,
+    plugin_configurations, cr_dtimes
+)
+SELECT
+    'FarmerCredentialMdoc', gen_random_uuid()::VARCHAR(255), 'active',
+    'ewogICJkb2NUeXBlIjogIiR7X2RvY3R5cGV9IiwKICAidmFsaWRpdHlJbmZvIjogewogICAgInZhbGlkRnJvbSI6ICIke192YWxpZEZyb219IiwKICAgICJ2YWxpZFVudGlsIjogIiR7X3ZhbGlkVW50aWx9IgogIH0sCiAgIm5hbWVTcGFjZXMiOiB7CiAgICAiaW8ubW9zaXAuZmFybWVyLjEiOiBbCiAgICAgIHsKICAgICAgICAiZGlnZXN0SUQiOiAwLAogICAgICAgICJlbGVtZW50SWRlbnRpZmllciI6ICJmdWxsTmFtZSIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke2Z1bGxOYW1lfSIKICAgICAgfSwKICAgICAgewogICAgICAgICJkaWdlc3RJRCI6IDEsCiAgICAgICAgImVsZW1lbnRJZGVudGlmaWVyIjogIm1vYmlsZU51bWJlciIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke21vYmlsZU51bWJlcn0iCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiZGlnZXN0SUQiOiAyLAogICAgICAgICJlbGVtZW50SWRlbnRpZmllciI6ICJkYXRlT2ZCaXJ0aCIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke2RhdGVPZkJpcnRofSIKICAgICAgfSwKICAgICAgewogICAgICAgICJkaWdlc3RJRCI6IDMsCiAgICAgICAgImVsZW1lbnRJZGVudGlmaWVyIjogImdlbmRlciIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke2dlbmRlcn0iCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiZGlnZXN0SUQiOiA0LAogICAgICAgICJlbGVtZW50SWRlbnRpZmllciI6ICJzdGF0ZSIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke3N0YXRlfSIKICAgICAgfSwKICAgICAgewogICAgICAgICJkaWdlc3RJRCI6IDUsCiAgICAgICAgImVsZW1lbnRJZGVudGlmaWVyIjogImRpc3RyaWN0IiwKICAgICAgICAiZWxlbWVudFZhbHVlIjogIiR7ZGlzdHJpY3R9IgogICAgICB9LAogICAgICB7CiAgICAgICAgImRpZ2VzdElEIjogNiwKICAgICAgICAiZWxlbWVudElkZW50aWZpZXIiOiAidmlsbGFnZU9yVG93biIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke3ZpbGxhZ2VPclRvd259IgogICAgICB9LAogICAgICB7CiAgICAgICAgImRpZ2VzdElEIjogNywKICAgICAgICAiZWxlbWVudElkZW50aWZpZXIiOiAicG9zdGFsQ29kZSIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke3Bvc3RhbENvZGV9IgogICAgICB9LAogICAgICB7CiAgICAgICAgImRpZ2VzdElEIjogOCwKICAgICAgICAiZWxlbWVudElkZW50aWZpZXIiOiAibGFuZEFyZWEiLAogICAgICAgICJlbGVtZW50VmFsdWUiOiAiJHtsYW5kQXJlYX0iCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiZGlnZXN0SUQiOiA5LAogICAgICAgICJlbGVtZW50SWRlbnRpZmllciI6ICJsYW5kT3duZXJzaGlwVHlwZSIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICIke2xhbmRPd25lcnNoaXBUeXBlfSIKICAgICAgfSwKICAgICAgewogICAgICAgICJkaWdlc3RJRCI6IDEwLAogICAgICAgICJlbGVtZW50SWRlbnRpZmllciI6ICJwcmltYXJ5Q3JvcFR5cGUiLAogICAgICAgICJlbGVtZW50VmFsdWUiOiAiJHtwcmltYXJ5Q3JvcFR5cGV9IgogICAgICB9LAogICAgICB7CiAgICAgICAgImRpZ2VzdElEIjogMTEsCiAgICAgICAgImVsZW1lbnRJZGVudGlmaWVyIjogInNlY29uZGFyeUNyb3BUeXBlIiwKICAgICAgICAiZWxlbWVudFZhbHVlIjogIiR7c2Vjb25kYXJ5Q3JvcFR5cGV9IgogICAgICB9LAogICAgICB7CiAgICAgICAgImRpZ2VzdElEIjogMTIsCiAgICAgICAgImVsZW1lbnRJZGVudGlmaWVyIjogImZhcm1lcklEIiwKICAgICAgICAiZWxlbWVudFZhbHVlIjogIiR7ZmFybWVySUR9IgogICAgICB9LAogICAgICB7CiAgICAgICAgImRpZ2VzdElEIjogMTMsCiAgICAgICAgImVsZW1lbnRJZGVudGlmaWVyIjogImlzc3VpbmdfY291bnRyeSIsCiAgICAgICAgImVsZW1lbnRWYWx1ZSI6ICJJTiIKICAgICAgfQogICAgXQogIH0KfQo=',
+    'io.mosip.farmer.1.FarmerCredential', 'mso_mdoc', did_url, 'CERTIFY_VC_SIGN_EC_R1', 'EC_SECP256R1_SIGN',
+    'ES256', 'ES256',
+    jsonb_set(display, '{0,name}', '"Farmer Credential (mDoc)"'),
+    ARRAY['io.mosip.farmer.1~fullName', 'io.mosip.farmer.1~mobileNumber', 'io.mosip.farmer.1~dateOfBirth', 'io.mosip.farmer.1~gender', 'io.mosip.farmer.1~state', 'io.mosip.farmer.1~district', 'io.mosip.farmer.1~villageOrTown', 'io.mosip.farmer.1~postalCode', 'io.mosip.farmer.1~landArea', 'io.mosip.farmer.1~landOwnershipType', 'io.mosip.farmer.1~primaryCropType', 'io.mosip.farmer.1~secondaryCropType', 'io.mosip.farmer.1~farmerID', 'io.mosip.farmer.1~issuing_country'],
+    'mock_identity_vc_mdoc', ARRAY['cose_key'], ARRAY['ES256'],
+    -- Certify derives the MSO device key from the proof key, which must be EC.
+    '{"jwt": {"proof_signing_alg_values_supported": ["ES256"]}}'::JSONB,
+    '{"io.mosip.farmer.1": {"fullName": {"display": [{"name": "Full Name", "locale": "en"}]}, "mobileNumber": {"display": [{"name": "Mobile Number", "locale": "en"}]}, "dateOfBirth": {"display": [{"name": "Date of Birth", "locale": "en"}]}, "gender": {"display": [{"name": "Gender", "locale": "en"}]}, "state": {"display": [{"name": "State", "locale": "en"}]}, "district": {"display": [{"name": "District", "locale": "en"}]}, "villageOrTown": {"display": [{"name": "Village or Town", "locale": "en"}]}, "postalCode": {"display": [{"name": "Postal Code", "locale": "en"}]}, "landArea": {"display": [{"name": "Land Area", "locale": "en"}]}, "landOwnershipType": {"display": [{"name": "Land Ownership Type", "locale": "en"}]}, "primaryCropType": {"display": [{"name": "Primary Crop Type", "locale": "en"}]}, "secondaryCropType": {"display": [{"name": "Secondary Crop Type", "locale": "en"}]}, "farmerID": {"display": [{"name": "Farmer ID", "locale": "en"}]}, "issuing_country": {"display": [{"name": "Issuing Country", "locale": "en"}]}}}'::JSONB,
+    plugin_configurations, NOW()
+FROM certify.credential_config
+WHERE credential_config_key_id = 'FarmerCredential'
+  AND NOT EXISTS (SELECT 1 FROM certify.credential_config WHERE credential_config_key_id = 'FarmerCredentialMdoc');
+COMMIT;

@@ -81,6 +81,7 @@ export class InjiMobileSimulator {
     );
     const body = { format: configuration.format, proof: { proof_type: "jwt", jwt: proof } };
     if (configuration.format === "ldp_vc") body.credential_definition = configuration.credential_definition;
+    else if (configuration.format === "mso_mdoc") Object.assign(body, { doctype: configuration.doctype, claims: configuration.claims });
     else body.vct = configuration.vct;
     const credentialResponse = await this.request(issuer.credential_endpoint, {
       method: "POST",

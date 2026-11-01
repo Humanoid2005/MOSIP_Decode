@@ -128,5 +128,8 @@ services:
     image: cloudflare/cloudflared:2025.8.1
     profiles: [mobile]
     command: [tunnel, --no-autoupdate, --url, http://gateway:8088]
+    # http2 (TCP 443) for networks that block the default QUIC over UDP.
+    environment:
+      TUNNEL_TRANSPORT_PROTOCOL: ${TUNNEL_TRANSPORT_PROTOCOL:-quic}
     depends_on:
       - gateway

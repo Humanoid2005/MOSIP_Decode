@@ -62,13 +62,13 @@ Use **Inji Mobile 0.22.x** on Android, the release paired with Certify 0.14, Mim
 
 Only the endpoints a phone wallet needs are public: issuer metadata and credential, DID documents, Keycloak's `inji` realm login and token, Verify's request and submission paths, and static configuration. The Keycloak admin console and `master` realm, the playground API and workbench, the bridge, Mimoto, Certify's offer creation and Verify's request creation answer 404 on the tunnel; `status` checks this. A stock Inji Mobile keeps its built-in backend for its own settings, so it never calls this stack's Mimoto. The URL is unguessable but not secret, so stop mobile mode when you are done.
 
-Limits: a quick tunnel can drop after some hours, and its URL never comes back. `status` reports this; `start` then moves the stack to a new URL (it keeps a URL that still answers). Credentials issued on an earlier URL name an issuer DID that no longer resolves, so issue the card again. The embedded wallet and Inji Web are unavailable while mobile mode is on. `rehearse` covers SD-JWT end to end and JSON-LD issuance plus verifier-request authentication; JSON-LD presentation needs the real app. iOS has not been tested. Use `start --origin https://…` with a stable tunnel of your own (for example an ngrok domain pointed at the gateway's `8088` listener) to keep the identity across sessions. Details are in [the local setup guide](infra/inji/README.md#inji-mobile-mode).
+Limits: a quick tunnel can drop after some hours, and its URL never comes back. `status` reports this; `start` then moves the stack to a new URL (it keeps a URL that still answers). Credentials issued on an earlier URL name an issuer DID that no longer resolves, so issue the card again. The embedded wallet and Inji Web are unavailable while mobile mode is on. `rehearse` covers SD-JWT end to end, JSON-LD issuance plus verifier-request authentication, and mDoc issuance with the app's storage checks followed by Inji Verify's decision (`--format mso_mdoc`); JSON-LD presentation needs the real app. iOS has not been tested. If `start` reports that QUIC (UDP) is blocked on your network, run it as `TUNNEL_TRANSPORT_PROTOCOL=http2 node infra/inji/scripts/mobile.mjs start` to use HTTP/2 over TCP 443 instead. Use `start --origin https://…` with a stable tunnel of your own (for example an ngrok domain pointed at the gateway's `8088` listener) to keep the identity across sessions. Details are in [the local setup guide](infra/inji/README.md#inji-mobile-mode).
 
 ## Use the workbench
 
 1. Configure Certify's upstream base URL and its canonical issuer identifier. They can differ when a protocol bridge is used, but the canonical identifier must exactly match Certify metadata.
 2. Configure Inji Verify's **v1** base URL (usually ending in `/v1/verify`), its client ID, and one existing presentation definition ID per credential format (`INJI_PRESENTATION_DEFINITION_IDS`, for example `ldp_vc=<id>,vc+sd-jwt=<id>`). Each definition must request the credential in that format.
-3. Discover issuer configurations on the Workbench. JSON-LD (`ldp_vc`) and SD-JWT (`vc+sd-jwt` / `dc+sd-jwt`) options appear only when advertised by Certify. The selected wallet and Verify release must also support the format.
+3. Discover issuer configurations on the Workbench. JSON-LD (`ldp_vc`), SD-JWT (`vc+sd-jwt` / `dc+sd-jwt`) and mDoc (`mso_mdoc`) options appear only when advertised by Certify. The selected wallet and Verify release must also support the format.
 4. Start issuance. Either paste a genuine issuer-provided credential offer or initiate the credential download inside Inji Mobile / Inji Web. Complete authentication in the wallet. No generic Certify offer-creation endpoint is assumed.
 5. Confirm receipt after the credential appears in the wallet. This is recorded as **user confirmation**, not as a wallet callback or cryptographic evidence.
 6. Request verification. Scan the returned QR code with Inji Mobile, or open the protocol link on a supported wallet device. For the configured Inji Web release, use **Present with Inji Web** to open its `/authorize` flow.
@@ -81,6 +81,20 @@ The local stack advertises `FarmerCredential` (JSON-LD, Ed25519Signature2020) an
 Choose **Playground mock wallet** to run SD-JWT end to end. It is a minimal OpenID4VCI / OpenID4VP holder outside the Inji stack, registered in Keycloak as the public PKCE client `playground-mock-wallet`. **Sign in and issue** opens Keycloak; after sign-in the wallet proves possession of a fresh `did:jwk` key, stores the credential and advances the run. **Present with mock wallet** discloses every claim with a Key Binding JWT. Its traffic uses public endpoints and passes through the protocol bridge. It authenticates the pinned did:web verifier's EdDSA request signature and validates its identity, endpoint, nonce, state and presentation definition before sharing. It does not support JSON-LD.
 
 Fresh databases and realms receive the SD-JWT configuration from initialization. Older environments need migrations `004` (Inji Certify database) and `005` (Inji Verify database), the realm changes in `RealmRenderer.mjs`, and a Certify and Mimoto restart; migrate them without deleting their volumes.
+
+### mDoc (ISO/IEC 18013-5)
+
+The local stack also advertises `FarmerCredentialMdoc` (`mso_mdoc`, doc type `io.mosip.farmer.1.FarmerCredential`, migration `009`). The same synthetic farmer record supplies the claims; Certify's own mDoc support salts and digests each element and COSE-signs the Mobile Security Object with its ES256 key.
+
+| Wallet | mDoc |
+| --- | --- |
+| Inji Mobile 0.22 | Receives it through the offer QR. Certify 0.14.0 needs the [backported holder-key fix](infra/inji/images/certify/README.md#mdoc-holder-key-fix) for the `did:jwk:…#0` key that Inji Mobile sends. |
+| Inji Web / embedded Inji wallet | Refused: Mimoto 0.21 has no `mso_mdoc` format handler, so the download fails before Certify is called. |
+| Playground mock wallet | Refused: SD-JWT only. |
+
+Inji Verify 0.17 has no `mso_mdoc` path, neither in OpenID4VP nor in its credential check, which treats the mDoc as JSON-LD. After you confirm receipt, **Send mDoc to Inji Verify** posts the mDoc that the bridge observed at issuance to Verify's `/v2/vc-verification` and records Verify's decision: **Invalid**, with its error code. No presentation takes place, so an mDoc run can never be an end-to-end pass, and only the normal scenario is offered. The inspector lists the decoded mDoc (doc type, elements, MSO and signing certificate) as an inspection-only entry. See [the validation record](docs/LIVE_VALIDATION.md#mdoc-isoiec-18013-5-credential--1-november-2026).
+
+Older environments need `npm start` (rebuilds the Certify image with the fix) followed by `npm run upgrade` (migration `009` and the `mock_identity_vc_mdoc` scope); mobile mode adds the scope to the `wallet` client on its next `start`.
 
 Issuer-led offer creation and onboarding APIs vary by Certify release. The current adapter supports wallet-initiated downloads and externally supplied offers; it does not automatically create an offer through Certify's administrative APIs.
 

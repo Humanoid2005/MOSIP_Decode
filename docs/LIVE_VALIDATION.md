@@ -247,3 +247,28 @@ The review fixes and mobile mode were merged with the 29 October layout change; 
 | `stop` | Local origin restored; normal run `4d8cdd64` PASS; Inji Web and the HTTPS workbench return 200 |
 
 A scan with a physical phone is still not validated.
+
+## mDoc (ISO/IEC 18013-5) credential — 1 November 2026
+
+Validated on Linux x86_64 with Docker 29.9.2 and a freshly created stack (new volumes) on the local origin, Certify 0.14.0 (with the [backported holder-key fix](../infra/inji/images/certify/README.md#mdoc-holder-key-fix)), Mimoto 0.21.0 and Verify 0.17.0. The rehearsals used the Inji Mobile simulator directly against `https://inji.127.0.0.1.sslip.io` with `NODE_EXTRA_CA_CERTS` set to the local CA; no tunnel was needed.
+
+| Check | Result |
+| --- | --- |
+| Issuer metadata | `FarmerCredentialMdoc`: `mso_mdoc`, doc type `io.mosip.farmer.1.FarmerCredential`, scope `mock_identity_vc_mdoc`, `cose_key` binding, ES256 proofs, 14 claim labels and `namespace~field` display order; the four earlier configurations unchanged |
+| Rehearsal, mDoc (`3785a67e`) | Offer scanned, Keycloak sign-in with client `wallet`, `did:jwk:…#0` proof, mDoc through the bridge (observed and decoded), receipt confirmed, then Verify's direct credential check: INVALID, `ERR_GENERIC: Exception during Validation: A JSONObject text must begin with '{'`; outcome FAIL; [report](evidence/mobile-mdoc-2026-11-01.json) |
+| Inji Mobile's storage checks on the issued mDoc | Pass: COSE ES256 signature with the `x5chain` key, all 14 value digests, `issuing_country` IN equals certificate `C=IN`, doc type, validity (two years). MSO device key equals the simulated holder's P-256 key |
+| Same rehearsal with Certify's original 0.14.0 jar (`3eae8d3b`) | Issuance rejected: HTTP 400 `Failed to add proof to mDoc`; Certify log `Illegal base64 character 23` (`#`); [report](evidence/mobile-mdoc-unpatched-certify-2026-11-01.json). The patched image was then recreated |
+| Workbench API: mDoc with Inji Web; mDoc with a negative scenario | Both refused with the reason before a run starts |
+| Upgrade path: mDoc row and scope removed, then `npm run upgrade` | Row and scope recreated, scope optional on `inji-wallet` and `playground-mock-wallet`, earlier configurations unchanged, Certify restarted healthy. With the scope on the `wallet` client (as `mobile.mjs start` assigns it), rehearsal `593b7ed0` gave the same result |
+| Existing journeys after the change | SD-JWT `1a5bec86` and `9900d449` VALID / PASS; JSON-LD `1e5195b8` and `f9e48751` issued and verifier request authenticated |
+| Automated checks | Server 113 tests (95 earlier ones unchanged), type check and build; infrastructure 24 tests (18 earlier); client lint and build |
+
+Findings:
+
+- **Certify 0.14.0 cannot issue mDoc to Inji Mobile's offer flow.** `MDocProcessor.createDeviceKeyInfo` removes only the `did:jwk:` prefix from the holder DID, and Inji Mobile 0.22 names its key `did:jwk:<key>#0` in credential-offer proofs. Fixed upstream on `develop` (943185e), not in any release up to `v1.0.0-alpha.1`; backported locally.
+- **Inji Web cannot receive mDoc.** Mimoto 0.21.0, 0.22.0 and 1.0.0-alpha.1 have credential format handlers for `ldp_vc`, `vc+sd-jwt` and `dc+sd-jwt` only; `CredentialFormatHandlerFactory.getHandler("mso_mdoc")` throws "Unsupported credential format" while building the credential request, before Certify is called. Established from source; the workbench refuses the combination.
+- **Inji Verify cannot verify mDoc.** Its OpenID4VP submission handles JSON-LD presentations and SD-JWT tokens only, and its credential check detects CWT and SD-JWT, then treats anything else as JSON-LD. The mDoc is therefore rejected with a JSON parsing error rather than an unsupported-format error. Unchanged up to `v1.0.0-alpha.1`, although its `vc-verifier` dependency has an `MSO_MDOC` verifier.
+- Certify sends `issuerAuth` as a tagged COSE_Sign1 (`#6.18`). The wallet's verifier accepts it; the playground's decoder initially did not, which left the first mDoc run (`0b3201a8`) unobserved. Fixed and covered by tests.
+- The first JSON-LD issuance after startup (`e739c171`) failed once because Certify could not reach `w3id.org` for a JSON-LD context (`Network is unreachable`); the retry and later runs succeeded. Unrelated to this change.
+
+Not validated: a scan with a physical phone, so on-device storage and the app's rendering of the mDoc card are inferred from the reproduced checks and the documented display contract. The browser-login journeys (embedded Mimoto, mock wallet) were not repeated in this session; their server paths are unchanged and covered by the unit tests.

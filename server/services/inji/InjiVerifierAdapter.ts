@@ -179,4 +179,85 @@ export class InjiVerifierAdapter implements VerifierAdapter {
       },
     };
   }
+  // Verify detects the format from the credential itself; it has no mso_mdoc
+  // presentation path, so this is the only route an mDoc can take into it.
+  async checkCredential(run: TestRun, credential: string) {
+    if (!run.environment.verifyUrl)
+      throw new AppError(409, "Configure the Verify URL first.");
+    const payload = object(
+      await this.http.json(
+        `${run.environment.verifyUrl}/v2/vc-verification`,
+        "Credential check (Inji v2, direct)",
+        run.id,
+        {
+          verifiableCredential: credential,
+          includeClaims: false,
+          skipStatusChecks: false,
+        },
+      ),
+    );
+    if (typeof payload.allChecksSuccessful !== "boolean")
+      throw new AppError(
+        502,
+        "Verifier returned no overall credential check result.",
+      );
+    const checks: import("../../models/verification.js").VerificationCheck[] = [
+      {
+        id: "openid4vp-presentation",
+        label: "Presentation over OpenID4VP",
+        source: "PLAYGROUND",
+        status: "NOT_CHECKED",
+        detail:
+          "Inji Verify has no mso_mdoc presentation path; the issued mDoc was sent to its credential check directly.",
+      },
+    ];
+    for (const [id, label, value] of [
+      [
+        "issuer-signature",
+        "Credential schema and issuer signature",
+        payload.schemaAndSignatureCheck,
+      ],
+      ["expiry", "Credential expiry", payload.expiryCheck],
+    ] as const) {
+      const check = value && typeof value === "object" ? object(value) : {};
+      const error =
+        check.error && typeof check.error === "object"
+          ? object(check.error)
+          : {};
+      checks.push({
+        id,
+        label,
+        source: "INJI_VERIFY",
+        status:
+          check.valid === true
+            ? "PASS"
+            : check.valid === false
+              ? "FAIL"
+              : "NOT_CHECKED",
+        ...(typeof error.errorCode === "string"
+          ? {
+              detail:
+                typeof error.errorMessage === "string"
+                  ? `${error.errorCode}: ${error.errorMessage}`
+                  : error.errorCode,
+            }
+          : {}),
+      });
+    }
+    const signature = checks.find((check) => check.id === "issuer-signature");
+    const expiry = checks.find((check) => check.id === "expiry");
+    return {
+      verdict: payload.allChecksSuccessful
+        ? ("VALID" as const)
+        : signature?.status === "PASS" && expiry?.status === "FAIL"
+          ? ("EXPIRED" as const)
+          : ("INVALID" as const),
+      payload,
+      verification: {
+        version: 1 as const,
+        upstreamAccepted: payload.allChecksSuccessful,
+        checks,
+      },
+    };
+  }
 }

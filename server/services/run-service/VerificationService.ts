@@ -1,6 +1,7 @@
 import { scenarioOutcome } from "../../models/scenarios.js";
 import type { ScenarioService } from "../scenario-service/ScenarioService.js";
 import type { RunDao, VerifierAdapter } from "../../models/contracts.js";
+import type { TestRun } from "../../models/dtos.js";
 import type { TelemetryService } from "../telemetry/TelemetryService.js";
 import { AppError, UpstreamError } from "../errors.js";
 import { credentialFingerprint } from "./credentialFingerprint.js";
@@ -22,6 +23,8 @@ export class VerificationService {
       );
     this.busy.add(id);
     try {
+      if (run.configuration.format === "mso_mdoc")
+        return await this.checkMdoc(run);
       const result = await this.verifier.create(run);
       const latest = this.dao.get(id);
       if (latest.phase !== "HELD") return latest;
@@ -51,6 +54,59 @@ export class VerificationService {
     } finally {
       this.busy.delete(id);
     }
+  }
+  // The verifier has no presentation flow for mDoc, so the bridge-observed
+  // credential is checked directly. No holder presentation is involved.
+  private async checkMdoc(run: TestRun) {
+    if (!run.issuedMdoc) {
+      this.scenarios.fail(
+        run.id,
+        "REQUEST",
+        "CREDENTIAL_NOT_OBSERVED",
+        "The bridge did not observe the issued mDoc, so there is no credential to send to Inji Verify.",
+      );
+      return this.dao.get(run.id);
+    }
+    let result: Awaited<ReturnType<VerifierAdapter["checkCredential"]>>;
+    try {
+      result = await this.verifier.checkCredential(run, run.issuedMdoc);
+    } catch (error) {
+      if (
+        error instanceof UpstreamError &&
+        error.upstreamStatus >= 400 &&
+        error.upstreamStatus < 500 &&
+        error.upstreamStatus !== 429
+      ) {
+        this.scenarios.fail(
+          run.id,
+          "VERIFICATION",
+          "VERIFIER_REJECTED",
+          error.message,
+        );
+        return this.dao.get(run.id);
+      }
+      throw error;
+    }
+    const latest = this.dao.get(run.id);
+    if (latest.phase !== "HELD") return latest;
+    latest.phase = "COMPLETED";
+    latest.verdict = result.verdict;
+    latest.result = result.payload;
+    latest.verification = result.verification;
+    latest.error = undefined;
+    latest.scenarioEvidence = {
+      ...latest.scenarioEvidence,
+      stage: "VERIFICATION",
+      errorCode: result.verdict,
+      rejectionReasonConfirmed: false,
+      detail: result.verification.upstreamAccepted
+        ? "Inji Verify accepted the mDoc in a direct credential check. No presentation took place, so this is not an end-to-end pass."
+        : "Inji Verify rejected the mDoc in a direct credential check. Its OpenID4VP flow has no mso_mdoc path.",
+    };
+    latest.updatedAt = new Date().toISOString();
+    this.dao.save(latest);
+    this.telemetry.notify(run.id);
+    return latest;
   }
   private recordError(id: string, error: Error) {
     const latest = this.dao.get(id);

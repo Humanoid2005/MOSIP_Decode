@@ -10,6 +10,7 @@ import {
   matchesCredentialFormat,
 } from "../run-service/credentialFingerprint.js";
 import type { ProtocolEvent } from "../../models/dtos.js";
+import { decodeMdoc, type MdocSummary } from "../run-service/mdoc.js";
 export class ProxyCaptureService {
   private readonly tokens = new Map<string, string>();
   constructor(
@@ -65,6 +66,7 @@ export class ProxyCaptureService {
       this.telemetry.record(id, event);
       return;
     }
+    let mdoc: MdocSummary | undefined;
     const body =
       event.response && typeof event.response === "object"
         ? (event.response as Record<string, unknown>)
@@ -141,6 +143,14 @@ export class ProxyCaptureService {
                 : [],
               proof: String(object(credential.proof).type ?? ""),
             };
+          } else if (run.configuration.format === "mso_mdoc") {
+            mdoc = decodeMdoc(body.credential as string);
+            run.issuedCredentialFacts = {
+              format: "mso_mdoc",
+              types: [mdoc.docType],
+              proof: mdoc.algorithm,
+            };
+            run.issuedMdoc = body.credential as string;
           } else if (typeof body.credential === "string") {
             const credential = decodeJwt(body.credential.split("~")[0]!);
             run.issuedCredentialFacts = {
@@ -160,6 +170,17 @@ export class ProxyCaptureService {
       }
     }
     this.telemetry.record(id, event);
+    if (mdoc)
+      this.telemetry.record(id, {
+        source: "PLAYGROUND",
+        title: "Issued mDoc decoded from CBOR (inspection only, not verified)",
+        method: "",
+        endpoint: "",
+        status: 0,
+        durationMs: 0,
+        request: null,
+        response: mdoc,
+      });
   }
   private hash(value: string): string {
     return createHash("sha256").update(value).digest("hex");

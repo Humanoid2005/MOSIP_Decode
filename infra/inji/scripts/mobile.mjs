@@ -2,7 +2,7 @@ import { MobileMode } from "./mobile/MobileMode.mjs";
 import { Rehearsal } from "./mobile/Rehearsal.mjs";
 
 // node infra/inji/scripts/mobile.mjs start [--origin https://stable.example] | stop | status
-//   | rehearse [--format vc+sd-jwt|ldp_vc]
+//   | rehearse [--format vc+sd-jwt|ldp_vc|mso_mdoc]
 const [command = "status", ...args] = process.argv.slice(2);
 const option = (name) =>
   args.includes(name) ? args[args.indexOf(name) + 1] : undefined;
@@ -51,7 +51,7 @@ try {
     await new Rehearsal().run(option("--format") ?? "vc+sd-jwt");
   } else {
     console.error(
-      "Usage: mobile.mjs start [--origin https://…] | stop | status | rehearse [--format vc+sd-jwt|ldp_vc]",
+      "Usage: mobile.mjs start [--origin https://…] | stop | status | rehearse [--format vc+sd-jwt|ldp_vc|mso_mdoc]",
     );
     process.exitCode = 2;
   }

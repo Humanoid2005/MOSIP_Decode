@@ -69,6 +69,8 @@ export interface TestRun {
   presentationExpectation?: { nonce: string; definition: JsonObject };
   submittedFingerprints?: string[];
   issuedCredentialFacts?: { format: string; types: string[]; proof: string };
+  // The bridge-observed mDoc, sent to the verifier's direct credential check.
+  issuedMdoc?: string;
 }
 export type RunSummary = Omit<
   TestRun,
@@ -77,4 +79,5 @@ export type RunSummary = Omit<
   | "offerUri"
   | "presentationUri"
   | "credentialFingerprints"
+  | "issuedMdoc"
 > & { eventCount: number };

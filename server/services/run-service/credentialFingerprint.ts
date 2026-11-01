@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
+import { isMdoc } from "./mdoc.js";
 
 export function matchesCredentialFormat(
   value: unknown,
   format: string,
 ): boolean {
+  if (format === "mso_mdoc") return isMdoc(value);
   let credential = value;
   if (typeof value === "string") {
     try {

@@ -270,3 +270,15 @@ Requested: make the project lighter and easier to set up without losing function
   - no volumes were deleted.
   - a browser SD-JWT mock-wallet run on the rebuilt images: Keycloak sign-in, issuance with the nonce mapper, and verification. Inji Verify accepted the presentation and the end-to-end checks passed.
 - The unused `inji-playground_runtime` volume from the legacy sync setup still exists. Remove it only with the user's approval.
+
+## mDoc as a third credential format — 1 November 2026 (Claude Code)
+
+- **User instructions:**
+  - Existing functionality must keep working exactly as it does; add, do not change.
+  - The issuer (the existing synthetic farmer provider) provides `mso_mdoc`, Inji Mobile stores it, and the mDoc goes to Inji Verify, which is expected to reject it. No extra (non-Inji) verifier for now.
+  - Do not add mDoc to Mimoto: the problem statement asks to surface gaps such as "Inji Web cannot receive mDoc", not to hide them.
+  - The user chose to backport Certify's own upstream fix (option 1) over recording the Certify failure only.
+- **Implemented:** migration `009` and scope `mock_identity_vc_mdoc` (renderers, `upgrade.mjs`, mobile mode); the patched `MDocProcessor` in `infra/inji/images/certify/patch`, kept out of the plugin source; a CBOR/mDoc decoder in `server/services/run-service/mdoc.ts`; bridge observation and an inspection-only decoded event; `VerifierAdapter.checkCredential` (Verify `/v2/vc-verification`) used only for `mso_mdoc` runs; wallet and scenario rules in `server/models/scenarios.ts`; workbench text and button; `rehearse --format mso_mdoc` with `mobile/MdocWalletCheck.mjs`.
+- **Verified:** see [LIVE_VALIDATION.md](LIVE_VALIDATION.md#mdoc-isoiec-18013-5-credential--1-november-2026). Issue drafts for Mimoto, Verify and Certify are in [MDOC_ISSUE_DRAFTS.md](MDOC_ISSUE_DRAFTS.md); none were filed.
+- Node 22.22.0 was installed for the user in `~/.local/opt` with links in `~/.local/bin`, at the user's request; the machine had no Node.
+- Not done: a physical-phone scan, and repeating the browser-login journeys (embedded Mimoto, mock wallet) in this session.
