@@ -139,7 +139,8 @@ export class InjiMobileSimulator {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        vp_token: presented + binding,
+        // Inji Mobile 0.22 sends a single SD-JWT as a JSON string, quotes included.
+        vp_token: JSON.stringify(presented + binding),
         presentation_submission: JSON.stringify({
           id: randomUUID(),
           definition_id: definition.id,

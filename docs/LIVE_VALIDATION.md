@@ -247,3 +247,19 @@ The review fixes and mobile mode were merged with the 29 October layout change; 
 | `stop` | Local origin restored; normal run `4d8cdd64` PASS; Inji Web and the HTTPS workbench return 200 |
 
 A scan with a physical phone is still not validated.
+
+## Inji Mobile on a physical phone — 1 November 2026
+
+Mobile mode ran on a new quick tunnel with 8/8 readiness checks, and a rehearsal passed before the phone was used. The phone was an Android device running Inji Mobile; the gateway logged its `okhttp/4.12.0` client calling over a mobile network.
+
+| Check | Result |
+| --- | --- |
+| First phone run (`bfe243ce`), SD-JWT | Offer scanned, issuer trusted, `farmer` signed in through Keycloak, credential issued through the bridge and stored, verifier trusted and card shared from the **Share** tab. Inji Verify: VALID. Two playground checks failed: `sd-hash` and `result-correlation`. |
+| Cause | The app sends the SD-JWT `vp_token` as a JSON string, in quote marks. The playground hashed and fingerprinted it with the quotes; the app's own `sd_hash` was correct. |
+| Fix | The checks decode a JSON-encoded token, with a unit test that fails on the old code. The simulator now sends the token the way the app does. The workbench and `mobile.mjs` now name the app's **Share** tab instead of "Scan". |
+| Rehearsal with the app's encoding (`4d9f2d7c`) | VALID / PASS |
+| Second phone run (`2e588e58`), SD-JWT | VALID / **PASS**. Every check passes (credential status not applicable), issuance was observed and matched, and receipt was confirmed. Report in [evidence](evidence/mobile-phone-2026-11-01.json). |
+| Screenshots | Result, inspector and a new sequence-diagram screenshot from `2e588e58`; readiness and QR screenshots re-captured from simulated run `a8ad3979` with the new wording. |
+| `stop` | Local origin restored; the HTTPS workbench returns 200. |
+
+Still not validated: JSON-LD presentation from the app, the same-device deep link on a phone, and iOS.
