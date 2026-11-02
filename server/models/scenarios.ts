@@ -146,11 +146,13 @@ export function scenarioUnavailable(
     return "Requires the local FarmerCredentialExpired JSON-LD issuer configuration.";
   if (id === "WRONG_NONCE" && wallet !== "MOCK_WALLET")
     return "Holder nonce control is available in the SD-JWT mock wallet only.";
+  // Inji wallets are mutated on their submission at the bridge, which only rewrites JSON-LD.
   if (
     ["BAD_SIGNATURE", "MODIFIED_CLAIM"].includes(id) &&
-    !["INJI_MIMOTO", "MOCK_WALLET"].includes(wallet)
+    wallet !== "MOCK_WALLET" &&
+    format !== "ldp_vc"
   )
-    return "Use the embedded Inji wallet or mock wallet for a controlled, observable mutation.";
+    return "Inji wallets support signature and claim mutations for JSON-LD only. Use the mock wallet for SD-JWT.";
   return undefined;
 }
 // The mock wallet's SD-JWT-only restriction is enforced separately.

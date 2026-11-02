@@ -26,8 +26,8 @@ flowchart LR
 
 | Scenario | How it is produced | Wallets |
 | --- | --- | --- |
-| **Bad signature** | Corrupts a signature in a copy of the presentation; the wallet's stored credential is untouched. JSON-LD is mutated on the correlated submission at the bridge. SD-JWT is mutated inside the mock wallet before it signs its Key Binding JWT. | Embedded Inji wallet, mock wallet |
-| **Modified claim** | Changes a signed claim without re-signing it, in the same places. | Embedded Inji wallet, mock wallet |
+| **Bad signature** | Corrupts a signature in a copy of the presentation; the wallet's stored credential is untouched. JSON-LD is mutated on the correlated submission at the bridge, whichever Inji wallet sent it. SD-JWT is mutated inside the mock wallet before it signs its Key Binding JWT. | Inji wallets (JSON-LD), mock wallet (SD-JWT) |
+| **Modified claim** | Changes a signed claim without re-signing it, in the same places. | Inji wallets (JSON-LD), mock wallet (SD-JWT) |
 | **Expired credential** | Certify signs the separate `FarmerCredentialExpired` configuration with January 2020 dates. Nothing is edited after signing. | JSON-LD wallets |
 | **Unsupported DID** | Certify signs the separate `FarmerCredentialUnsupportedDid` fixture whose issuer is `did:playground:unresolvable-issuer`. The report shows the stage where it actually failed. | JSON-LD wallets |
 | **Wrong credential type, format or proof** | A fresh verifier request asks for something the issued credential does not satisfy. A wallet that refuses to match is recorded separately from a verifier rejection. The mock wallet deliberately submits anyway, to test the verifier's own enforcement. | All |

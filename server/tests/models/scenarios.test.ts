@@ -170,7 +170,15 @@ test("scenario availability follows wallet and fixture support", () => {
     undefined,
   );
   assert.ok(scenarioUnavailable("WRONG_NONCE", "INJI_MIMOTO", "ldp_vc"));
-  assert.ok(scenarioUnavailable("BAD_SIGNATURE", "INJI_WEB", "ldp_vc"));
+  assert.equal(
+    scenarioUnavailable("BAD_SIGNATURE", "INJI_WEB", "ldp_vc"),
+    undefined,
+  );
+  assert.equal(
+    scenarioUnavailable("MODIFIED_CLAIM", "INJI_MOBILE", "ldp_vc"),
+    undefined,
+  );
+  assert.ok(scenarioUnavailable("BAD_SIGNATURE", "INJI_MOBILE", "vc+sd-jwt"));
   assert.ok(
     scenarioUnavailable("EXPIRED_CREDENTIAL", "INJI_MIMOTO", "ldp_vc", false),
   );
