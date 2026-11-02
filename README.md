@@ -32,21 +32,68 @@ flowchart LR
 - **mDoc reaches the phone, not the verifier.** Inji Certify issues an ISO/IEC 18013-5 mDoc that Inji Mobile stores on a real phone (run `baf94774`); Inji Verify 0.17 cannot verify mDoc and rejects it.
 - **Where it breaks.** Testing turned up 26 gaps. For example, Inji Verify 0.17 accepts an SD-JWT presentation with the wrong nonce, and Mimoto 0.21 cannot present SD-JWT. See [the gap report](docs/INTEROP_GAPS.md).
 
-The full results are in the [interoperability matrix](docs/INTEROP_MATRIX.md), and the [coverage page](docs/PROBLEM_STATEMENT_COVERAGE.md) maps every task in the problem statement to what was built.
+The full results are in the [interoperability matrix](docs/INTEROP_MATRIX.md) and [test results](docs/TEST_CASES.md). **Reviewing this submission? Start at [docs/SUBMISSION.md](docs/SUBMISSION.md)**: it maps every guideline to its document and gives a 10-minute route through the project.
 
-## Quick start
+## Install and run
 
-Requirements: Docker with about 6 GB of memory, and Node.js 22. From the repository root:
+Works on macOS and Linux. Windows has not been tested.
 
-```bash
-npm start
-```
+**You need:** Docker with Compose v2 and at least 6 GB of memory for containers (12 GB is more comfortable), Node.js 22 or later, and internet access for the first build. Ports 443, 5173, 8000, 8091 and 8443 must be free on `127.0.0.1`.
 
-This renders the local configuration, then builds and starts the 12 services. Open the workbench at **https://inji.127.0.0.1.sslip.io/playground/** and accept the certificate warning. The embedded Inji wallet needs this HTTPS address; the other flows also work at http://localhost:5173. Sign in or create an account with **Step 0 · Create account / Sign in**; new accounts get a synthetic farmer record on first issuance. The seeded `farmer` account uses `LOCAL_FARMER_PASSWORD` from `.env`.
+1. **Get the code.**
 
-Other tasks (`stop`, `logs`, `rebuild:client`, `upgrade`, …) are in the root [package.json](package.json). Existing checkouts should use `npm start` (or `npm run prepare:config`) after pulling, because Compose reads rendered files such as `infra/inji/generated/origin.env`.
+   ```bash
+   git clone https://github.com/Humanoid2005/MOSIP_Decode.git
+   cd MOSIP_Decode
+   ```
 
-The shared development `.env` and `infra/inji/secrets/` are committed for the private team, so a clone needs no bootstrap step. Before the repository becomes public, remove both from history and run `npm run bootstrap` to create new private values. Do not trust `local-ca.crt` system-wide, because its private key is shared.
+2. **Start everything.** This renders the local configuration, then builds and starts the 12 services. The first run takes several minutes.
+
+   ```bash
+   npm start
+   ```
+
+3. **Check it is up.** All services should be running and the API should answer `"status":"UP"`. `wallet-keys-init` exiting with code 0 is normal.
+
+   ```bash
+   npm run status
+   curl http://localhost:8000/api/v1/health
+   ```
+
+4. **Open the workbench** at **https://inji.127.0.0.1.sslip.io/playground/** and accept the certificate warning. Do not trust the local CA system-wide, because its private key is shared.
+
+5. **Run your first flow.** Choose **Playground mock wallet · non-Inji** and **Farmer Credential (SD-JWT)**, then select **Start issuance**. When Keycloak opens, choose **Register** to create an account. New accounts get a synthetic farmer record on first issuance. Accounts and sample data are listed in [TEST_DATA.md](docs/TEST_DATA.md).
+
+6. **Stop it** when you are done. Accounts, wallets and credentials are kept.
+
+   ```bash
+   npm run stop
+   ```
+
+| Address | What it is |
+| --- | --- |
+| https://inji.127.0.0.1.sslip.io/playground/ | Workbench, all flows |
+| http://localhost:5173 | Workbench, all flows except the embedded Inji wallet |
+| https://inji.127.0.0.1.sslip.io | Inji Web |
+| http://localhost:8000/api/v1 | Playground API, see [API.md](docs/API.md) |
+
+Other tasks (`logs`, `rebuild:client`, `rebuild:server`, `upgrade`, …) are in the root [package.json](package.json).
+
+### Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| Compose says `origin.env` is not found | Use `npm start` or `npm run prepare:config` rather than plain `docker compose up`. Compose reads rendered files. |
+| A port is already in use | Stop whatever is using it, then run `npm start` again. |
+| A service stays unhealthy, or a build is killed | Give Docker more memory, then check `npm run logs`. |
+| `inji.127.0.0.1.sslip.io` does not resolve | Your DNS may block it. Add `127.0.0.1 inji.127.0.0.1.sslip.io` to your hosts file. |
+| A JSON-LD issuance fails on a context fetch | Certify could not reach `w3id.org` for a moment. Start a new run. |
+| New credentials or scenarios are missing on an older stack | Run `npm start`, then `npm run upgrade`. It keeps your data. |
+| You want to start completely fresh | `docker compose down -v` **deletes all accounts, wallets and credentials**. Then run `npm start`. |
+
+### Shared development secrets
+
+The shared development `.env` and `infra/inji/secrets/` are committed for the team, so a clone needs no bootstrap step. They are local-only values. Before the repository becomes public, remove both from history and run `npm run bootstrap` to create new private values.
 
 ## Pick a flow
 
@@ -145,10 +192,15 @@ History is kept in memory (100 runs), so export the reports you want to keep bef
 
 | Document | Read it for |
 | --- | --- |
+| [Submission guide](docs/SUBMISSION.md) | Every submission item and where it is, the project in brief, and a 10-minute route for the jury |
 | [Problem statement coverage](docs/PROBLEM_STATEMENT_COVERAGE.md) | Every task and deliverable in the brief, with its status and where to see it |
 | [Architecture](docs/ARCHITECTURE.md) | Services, the protocol bridge, the orchestrator, run lifecycle and design decisions |
 | [Protocol flows](docs/PROTOCOL_FLOWS.md) | OpenID4VCI and OpenID4VP step by step for each wallet, and mobile mode |
 | [Scenarios and outcomes](docs/SCENARIOS.md) | Replay & tamper, outcome rules and the report format |
+| [API documentation](docs/API.md) | Every endpoint with request and response formats, authentication and examples, and the upstream APIs used |
+| [Design](docs/DESIGN.md) | Screen map, user flow, wireframes and screens |
+| [Test data](docs/TEST_DATA.md) | Accounts, credentials, sample inputs and sample reports |
+| [Test cases and results](docs/TEST_CASES.md) | Every test, what was expected and what happened |
 | [Interoperability matrix](docs/INTEROP_MATRIX.md) | Which combinations pass, with run IDs and evidence |
 | [Interoperability gaps](docs/INTEROP_GAPS.md) | The 26 gaps found, with evidence, workarounds and where to file them |
 | [mDoc issue drafts](docs/MDOC_ISSUE_DRAFTS.md) | Ready-to-file issues for the three mDoc gaps |
@@ -172,7 +224,7 @@ History is kept in memory (100 runs), so export the reports you want to keep bef
 
 ## Tests and CI
 
-Server unit tests live in `server/tests` and run with `npm test` (Node's built-in runner through `tsx`). They cover redaction, fingerprints, run storage, the mock wallet's request authentication and SD-JWT binding, bridge path rules and scenario scoring. Infrastructure script tests (configuration rendering, mobile mode) run with `node --test "infra/inji/scripts/tests/*.test.mjs"`. Other checks are `npm run typecheck` / `npm run build` in `server` and `npm run lint` / `npm run build` in `client`. GitHub Actions ([ci.yml](.github/workflows/ci.yml)) runs all of them on pushes to `main` and on pull requests, and the server Docker image build also runs the tests.
+All 138 automated tests pass (server 114, infrastructure 24); see [test cases and results](docs/TEST_CASES.md). Server unit tests live in `server/tests` and run with `npm test` (Node's built-in runner through `tsx`). They cover redaction, fingerprints, run storage, the mock wallet's request authentication and SD-JWT binding, bridge path rules and scenario scoring. Infrastructure script tests (configuration rendering, mobile mode) run with `node --test "infra/inji/scripts/tests/*.test.mjs"`. Other checks are `npm run typecheck` / `npm run build` in `server` and `npm run lint` / `npm run build` in `client`. GitHub Actions ([ci.yml](.github/workflows/ci.yml)) runs all of them on pushes to `main` and on pull requests, and the server Docker image build also runs the tests.
 
 ## Reference contracts
 

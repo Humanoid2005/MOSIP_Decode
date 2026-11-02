@@ -135,7 +135,7 @@ sequenceDiagram
     loop every 3 s until done
         OR->>VE: GET /vp-request/{id}/status
     end
-    OR->>VE: GET /v2/vp-results/{transactionId}
+    OR->>VE: POST /v2/vp-results/{transactionId}
     OR->>OR: Playground checks and outcome
     OR-->>WB: VALID · INVALID · EXPIRED, and PASS or FAIL
 ```
