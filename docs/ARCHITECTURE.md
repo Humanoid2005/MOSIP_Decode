@@ -2,7 +2,7 @@
 
 The playground runs the real Inji services and adds two things around them: a **workbench** where you choose and drive a flow, and an **orchestrator with a protocol bridge** that sits on the wallet's network path and records every exchange. It never signs or verifies credentials on Inji's behalf, and it does not simulate verdicts.
 
-This document describes the system as built. For the protocol steps, see [PROTOCOL_FLOWS.md](PROTOCOL_FLOWS.md); for negative testing and scoring, see [SCENARIOS.md](SCENARIOS.md).
+This document describes the system as built. For the protocol steps, see [PROTOCOL_FLOWS.md](PROTOCOL_FLOWS.md); for negative testing and scoring, [SCENARIOS.md](SCENARIOS.md); for endpoints, [API.md](API.md); for the interface, [DESIGN.md](DESIGN.md).
 
 ## The problem it solves
 

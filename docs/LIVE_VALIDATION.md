@@ -291,3 +291,21 @@ Findings:
 - The first JSON-LD issuance after startup (`e739c171`) failed once because Certify could not reach `w3id.org` for a JSON-LD context (`Network is unreachable`); the retry and later runs succeeded. Unrelated to this change.
 
 Not validated: the Inji Mobile version, and a capture of the card's fields on the phone (checked by the user). The browser-login journeys (embedded Mimoto, mock wallet) were not repeated in this session; their server paths are unchanged and covered by the unit tests.
+
+## Final check before submission — 2 November 2026
+
+The merged code (mDoc work included) was rebuilt with `npm start` on the existing volumes and upgraded with `npm run upgrade`, on macOS (Apple silicon) with Colima 6 CPU / 12 GiB and Docker 29.5. All 12 services ran with their health checks passing.
+
+| Check | Result |
+| --- | --- |
+| Automated checks | Server 114 tests, type check and build; infrastructure 24 tests; client lint and build |
+| Mock wallet, SD-JWT | Normal `5938d96b` VALID / PASS; bad signature `0d5bc4be` and modified claim `c6cd200a` INVALID / scenario PASS; wrong type `b0ed89f4`, format mismatch `eb92964c`, proof mismatch `aef96af7` and wrong nonce `4297daba` VALID / scenario FAIL, because pinned Verify accepts them as before |
+| Simulated Inji Mobile on the local origin | SD-JWT `ab2f0f36` VALID / PASS; JSON-LD `5cb0d4c6` issued and verifier request authenticated |
+| `mobile.mjs start` on a new tunnel | 8/8 readiness checks |
+| Simulated Inji Mobile over the tunnel | SD-JWT `ebde8bb9` VALID / PASS; JSON-LD `4b36e562` issued and verifier request authenticated; mDoc `1ab07218` issued, storage checks pass, Verify INVALID as recorded |
+| `stop` | Local origin restored; the HTTPS workbench, localhost workbench and Inji Web return 200 |
+| API validation and lifecycle errors | Every documented 400, 403, 404, 409, 415 and 422 case returned its documented error; see [test cases](TEST_CASES.md#edge-cases-and-reliability) |
+| WebSocket | The allowed origin receives `connected`; a foreign or missing origin is refused |
+| Run history in Chromium | Outcome, format, scenario and stack version filters return the right rows; a report downloads (`1058d972`, `a23f5a28`, `80a94b73`) |
+
+The embedded wallet and Inji Web browser journeys were not repeated on this build; they need a person at the browser. Their server paths are unchanged and covered by unit tests. On an older realm, `rehearse --format mso_mdoc` needs one `mobile.mjs start` first, because that is what gives the `wallet` client its mDoc scope.

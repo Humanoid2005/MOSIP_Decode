@@ -1,13 +1,13 @@
 # Problem statement coverage
 
-How the playground answers [MOSIP Decode problem statement 02](02_Interoperability_Playground_for_Verifiable_Credentials.pdf) ([text version](PROBLEM_STATEMENT.md)), item by item. Status is stated as of 1 November 2026, and every "done" links to where you can see it.
+How the playground answers [MOSIP Decode problem statement 02](02_Interoperability_Playground_for_Verifiable_Credentials.pdf) ([text version](PROBLEM_STATEMENT.md)), item by item. Status is stated as of 2 November 2026, and every "done" links to where you can see it. The submission guidelines are mapped separately in [SUBMISSION.md](SUBMISSION.md).
 
 ```mermaid
 %%{init: {"themeVariables": {"pie1": "#34d399", "pie2": "#fbbf24", "pie3": "#f87171", "pieStrokeColor": "#ffffff", "pieSectionTextColor": "#0f172a", "pieOuterStrokeWidth": "0px"}}}%%
 pie showData title 22 items in the problem statement
-    "Done" : 14
+    "Done" : 15
     "Partly done" : 6
-    "Not done" : 2
+    "Not done" : 1
 ```
 
 ✅ done · 🟡 partly done · ❌ not done
@@ -39,7 +39,7 @@ pie showData title 22 items in the problem statement
 
 | Task | Status | Where to see it |
 | --- | --- | --- |
-| A CI-style interoperability suite that runs nightly and posts a compatibility matrix | 🟡 | GitHub Actions runs 113 unit tests, type checks, lint and builds on every push and pull request. Live journeys are scripted (`mobile.mjs rehearse`) but not scheduled, and nothing runs against the Collab sandbox. |
+| A CI-style interoperability suite that runs nightly and posts a compatibility matrix | 🟡 | GitHub Actions runs 138 unit tests, type checks, lint and builds on every push and pull request. Live journeys are scripted (`mobile.mjs rehearse`) but not scheduled, and nothing runs against the Collab sandbox. |
 | File the gaps found as issues on the Inji repositories | 🟡 | 26 gaps written up with evidence and target repositories in [INTEROP_GAPS.md](INTEROP_GAPS.md). None filed yet. |
 | Telemetry: success rate and latency per flow | 🟡 | Every exchange records its status and duration, shown in the inspector, the sequence diagram and the report. No aggregate dashboard. |
 | A one-command Docker Compose bundle | ✅ | `npm start`. |
@@ -49,8 +49,8 @@ pie showData title 22 items in the problem statement
 | Deliverable | Status | Where |
 | --- | --- | --- |
 | A working, locally runnable playground | ✅ | `npm start`, then https://inji.127.0.0.1.sslip.io/playground/ |
-| Source in a public GitHub repository, with a README covering setup, architecture and every flow | 🟡 | The [README](../README.md) covers all three. The repository is private and contains shared development secrets: before publishing, remove `.env` and `infra/inji/secrets/` from history and run `npm run bootstrap`. |
-| A 3–5 minute demo video of a full issue → hold → present → verify cycle with the inspector visible | ❌ | Not recorded yet. A suggested script is below. |
+| Source in a public GitHub repository, with a README covering setup, architecture and every flow | 🟡 | The [README](../README.md) covers all three, with [installation steps](../README.md#install-and-run). The repository contains shared local development secrets: before publishing, remove `.env` and `infra/inji/secrets/` from history and run `npm run bootstrap`. |
+| A 3–5 minute demo video of a full issue → hold → present → verify cycle with the inspector visible | ❌ | Shared with the submission email rather than stored here. A suggested script is below. |
 | An interoperability report or matrix | ✅ | [INTEROP_MATRIX.md](INTEROP_MATRIX.md), plus per-run reports in the app |
 | A write-up of the gaps found, ideally filed as issues | 🟡 | [INTEROP_GAPS.md](INTEROP_GAPS.md); filing pending |
 
@@ -62,11 +62,13 @@ Every verdict comes from the real Inji services, and every exchange the wallet m
 
 > **b.** Surface real interoperability gaps (format mismatches, proof-type incompatibilities, DID method gaps, QR size limits) that the core teams can act on.
 
-[INTEROP_GAPS.md](INTEROP_GAPS.md) lists 23, four of them high severity:
+[INTEROP_GAPS.md](INTEROP_GAPS.md) lists 26, seven of them high severity:
 
 - Inji Verify 0.17 accepts SD-JWT presentations with a wrong nonce (V1).
 - Inji Verify 0.17 accepts presentations that do not match the presentation definition (V2).
-- Mimoto 0.21 cannot present SD-JWT at all (M1, M2).
+- Mimoto 0.21 cannot present SD-JWT at all (M1, M2), or download mDoc (M12).
+- Inji Verify 0.17 cannot verify mDoc (V4).
+- Inji Certify 0.14 cannot issue mDoc to Inji Mobile's offer flow without a backported fix (C5).
 
 ## Suggested demo script (about 4 minutes)
 
