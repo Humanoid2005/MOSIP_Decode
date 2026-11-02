@@ -1,3 +1,4 @@
+-- Runs in inji_verify as part of every fresh seed (gap M2).
 BEGIN;
 -- Mimoto 0.21.0 rejects SD-JWT credentials when an input descriptor declares a format, and throws
 -- UNSUPPORTED_FORMAT when constraint fields are evaluated against them. The only definition it can

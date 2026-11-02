@@ -1,3 +1,5 @@
+# Type-checks, tests, lints and builds the server and client, and runs the
+# infrastructure script tests. It does not build images or start the stack.
 name: CI
 
 on:
@@ -46,6 +48,8 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
+  # Tests for infra/inji/scripts, such as configuration rendering and mobile
+  # mode. They use only Node built-ins, so there is no install step.
   infra:
     runs-on: ubuntu-latest
     steps:

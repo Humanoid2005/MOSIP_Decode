@@ -1,6 +1,10 @@
+-- Adds the expired-credential scenario's configuration to inji_certify. Runs
+-- in local mode, in the fresh seed and on every upgrade.mjs run, so it must
+-- stay rerunnable.
 BEGIN;
 -- The dates are set before Certify signs the credential; the normal configuration is untouched.
 INSERT INTO certify.credential_config
+-- Copies every column of the JSON-LD farmer row and overrides the keys below.
 SELECT (jsonb_populate_record(NULL::certify.credential_config,
     to_jsonb(source) || jsonb_build_object(
         'credential_config_key_id', 'FarmerCredentialExpired',

@@ -2,6 +2,7 @@ import type { TestRun } from "../../models/playground";
 import type { VerificationCheck } from "../../../../server/models/verification";
 import { interoperabilityOutcome } from "../../../../server/models/scenarios";
 
+// Each check's status and whether Inji Verify or the playground made it.
 function CheckList({ checks }: { checks: VerificationCheck[] }) {
   return (
     <ul className="divide-y divide-slate-100">
@@ -33,6 +34,10 @@ function CheckList({ checks }: { checks: VerificationCheck[] }) {
   );
 }
 
+// Verification evidence on the workbench and in the inspector, once a run has
+// a result. Inji Verify's decision is shown beside the playground's
+// end-to-end outcome, because acceptance alone is not a pass. Failed and
+// unchecked checks are listed first; the rest are collapsed.
 export function VerificationResult({ run }: { run: TestRun }) {
   if (!run.verification) return null;
   const outcome = interoperabilityOutcome(run);

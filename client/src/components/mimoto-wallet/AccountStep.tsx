@@ -6,11 +6,17 @@ import { useEnvironment } from "../../services/usePlayground";
 import { mimotoApi, signInToWallet } from "../../services/mimoto-wallet/MimotoApi";
 import { ErrorNotice } from "../ui";
 
+// Optional step 0 on the workbench: sign in to, or register, the Inji account
+// behind the embedded wallet before starting a flow. Hidden when no embedded
+// wallet is configured. Mimoto's session cookie exists only on the secure
+// workbench origin, so on any other origin it links there instead.
 export function AccountStep() {
   const environment = useEnvironment();
   const url = environment.data?.embeddedWalletUrl;
   const secure = Boolean(url && location.origin === new URL(url).origin);
   const [skipped, setSkipped] = useState(false);
+  // Listing wallets doubles as the sign-in check: 401 or 403 means there is no
+  // Mimoto session. The query is shared with MimotoWalletPanel.
   const session = useQuery({
     queryKey: ["mimoto-wallets"],
     queryFn: mimotoApi.wallets,

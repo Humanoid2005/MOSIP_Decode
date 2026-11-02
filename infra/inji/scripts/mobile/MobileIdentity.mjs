@@ -15,6 +15,8 @@ export function identitySql(fromOrigin, toOrigin) {
       (sql, [from, to]) => `replace(${sql}, ${literal(from)}, ${literal(to)})`,
       expression,
     );
+  // The template is decoded, rewritten and re-encoded. encode() wraps base64
+  // output into lines, so the line breaks are removed again.
   const template = `replace(encode(convert_to(${rewrite(
     "convert_from(decode(vc_template, 'base64'), 'UTF8')",
   )}, 'UTF8'), 'base64'), E'\\n', '')`;

@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import type { RunDao } from "../../models/contracts.js";
 import type { ProtocolEvent } from "../../models/dtos.js";
 import { boundedPayload } from "./sanitize.js";
+// Two events record the same exchange when title, method, endpoint, status and
+// payloads match; IDs, timestamps and durations differ between repeated polls.
 function sameExchange(a: ProtocolEvent, b: ProtocolEvent): boolean {
   return (
     a.title === b.title &&
@@ -13,12 +15,18 @@ function sameExchange(a: ProtocolEvent, b: ProtocolEvent): boolean {
       JSON.stringify([b.request, b.response])
   );
 }
+// Keeps each run's protocol timeline, the event list the inspector and report
+// show. Payloads are redacted and bounded before storage, only the latest 300
+// events are kept, and every change is announced to TelemetrySocket.
 export class TelemetryService {
+  // Emits "change" with a run ID whenever browsers should refetch that run.
   readonly changes = new EventEmitter();
   constructor(private readonly runs: RunDao) {}
+  // Announces a run change made outside record(), such as a phase change.
   notify(runId: string): void {
     this.changes.emit("change", runId);
   }
+  // Appends an event to the run's timeline. Throws 404 if the run is gone.
   record(
     runId: string,
     event: Omit<ProtocolEvent, "id" | "timestamp">,

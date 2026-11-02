@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { InMemoryRunDao } from "../../models/InMemoryRunDao.js";
 import { AppError } from "../../services/errors.js";
 import { testRun } from "../fixtures.js";
+// InMemoryRunDao: copy isolation, newest-first listing, the 100-run limit,
+// fields left out of summaries, and the active-run lookup.
 
 test("returns copies so callers cannot mutate stored runs", () => {
   const dao = new InMemoryRunDao();
@@ -22,6 +24,7 @@ test("lists newest first and evicts the oldest run beyond 100", () => {
   assert.equal(summaries.length, 100);
   assert.equal(summaries[0]!.id, "run-100");
   assert.throws(() => dao.get("run-0"), AppError);
+  // Updating a stored run at the limit does not evict another.
   dao.save(testRun({ id: "run-1", phase: "HELD" }));
   assert.equal(dao.summaries().length, 100);
   assert.equal(dao.get("run-1").phase, "HELD");

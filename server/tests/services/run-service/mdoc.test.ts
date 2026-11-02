@@ -13,6 +13,8 @@ import {
   issueSdJwt,
   type Cbor,
 } from "../../credentials.js";
+// The CBOR and mDoc decoder used to inspect bridged mDoc credentials, and
+// mDoc format detection.
 
 test("CBOR maps, arrays, negative integers and tags decode", () => {
   const value = decodeCbor(
@@ -29,6 +31,7 @@ test("CBOR maps, arrays, negative integers and tags decode", () => {
     null,
     { tag: 24, value: Buffer.from([1, 2]) },
   ]);
+  // f9 3c00 is the half-precision float 1.0.
   assert.equal(decodeCbor(Buffer.from([0xf9, 0x3c, 0x00])), 1);
 });
 

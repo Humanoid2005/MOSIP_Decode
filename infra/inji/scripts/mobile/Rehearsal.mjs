@@ -6,11 +6,15 @@ const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 
 // Drives a real workbench run with the simulated phone over the public origin.
 export class Rehearsal {
+  // api is the playground server's API on this computer.
   constructor(log = console.log, api = "http://127.0.0.1:8000/api/v1") {
     this.log = log;
     this.api = api;
   }
 
+  // Issues the first non-fixture credential of the given format to a simulated
+  // phone, signed in as the seeded farmer, and checks that the bridge saw it.
+  // How the run continues from there depends on the format.
   async run(format) {
     const config = await Configuration.load();
     const { configurations } = await this.call("/issuer");
@@ -33,6 +37,7 @@ export class Rehearsal {
       const stored = walletMdocChecks(issued.credential);
       this.log(`The wallet's mDoc checks passed for ${stored.docType} (signed by ${stored.certificate}).`);
     }
+    // Confirms receipt and requests verification, as the workbench buttons do.
     await this.call(`/runs/${run.id}/holder`, {});
     run = await this.call(`/runs/${run.id}/presentation`, {});
     if (format === "mso_mdoc") {
@@ -51,6 +56,7 @@ export class Rehearsal {
       this.log("Verifier request authenticated against its did:web key. JSON-LD presentation signing needs the real app; run cancelled.");
       return run.id;
     }
+    // SD-JWT: presents, then waits up to two minutes for Verify's decision.
     await phone.presentSdJwt(run.presentationUri, issued.credential);
     for (let attempt = 0; attempt < 40 && run.phase === "VERIFYING"; attempt++) {
       await pause(3000);
@@ -62,6 +68,8 @@ export class Rehearsal {
     return run.id;
   }
 
+  // Calls the API as the workbench does: POST with a JSON body when one is
+  // given, GET otherwise.
   async call(path, body) {
     const response = await fetch(this.api + path, {
       method: body ? "POST" : "GET",

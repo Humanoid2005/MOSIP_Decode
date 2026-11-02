@@ -4,7 +4,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.json.JSONObject;
 
+// Builds a fictional farmer record whose claims are visibly synthetic; nothing
+// is taken from the user's account.
 public final class SyntheticFarmerFactory {
+    // The identifier is a name-based UUID of the subject, so a subject always
+    // gets the same name suffix and farmer ID.
     public JSONObject create(String subject) {
         String identifier = UUID.nameUUIDFromBytes(subject.getBytes(StandardCharsets.UTF_8)).toString();
         return new JSONObject()

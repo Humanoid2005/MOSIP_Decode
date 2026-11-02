@@ -1,5 +1,9 @@
 import type { ProtocolEvent } from "../../models/playground";
 import { cn } from "../../services/cn";
+// Left column of the protocol inspector: the run's captured events in capture
+// order, each with its source, HTTP status and duration. Identical consecutive
+// polls are stored as one event with a repeat count. Choosing an event shows
+// its payload in PayloadView.
 export function ExchangeList({
   events,
   selectedId,

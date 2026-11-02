@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { AppError } from "../../../services/errors.js";
 import { presentationUri } from "../../../services/inji/PresentationRequest.js";
 import { testRun } from "../../fixtures.js";
+// presentationUri(): the wallet link that carries Verify's request URI, and
+// the rejection of malformed request URIs.
 
 test("passes the verifier's request URI by reference", () => {
   const uri = new URL(

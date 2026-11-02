@@ -25,6 +25,8 @@ export function phoneReachability(origin: string): {
     ?.replaceAll("-", ".");
   const ip = embedded ?? (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) ? host : "");
   const [a = 0, b = 0] = ip.split(".").map(Number);
+  // Loopback, link-local and private address ranges, and names that resolve
+  // only on a local network.
   const local =
     ["localhost", "[::1]"].includes(host) ||
     /\.(?:localhost|local|internal|lan|home\.arpa)$/.test(host) ||

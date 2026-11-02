@@ -4,11 +4,13 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { walletMdocChecks } from "../mobile/MdocWalletCheck.mjs";
 
+// Covers walletMdocChecks with mDocs encoded and signed in this file.
 // Test-only issuer (C=IN), unrelated to the stack's keys.
 const fixture = (name) => readFile(new URL(`fixtures/${name}`, import.meta.url));
 const key = createPrivateKey(await fixture("mdoc-test.key"));
 const certificate = new X509Certificate(await fixture("mdoc-test.crt")).raw;
 
+// Minimal CBOR encoder; { tag, value } objects encode as tagged values.
 const head = (major, length) =>
   length < 24 ? Buffer.from([(major << 5) | length])
     : length < 256 ? Buffer.from([(major << 5) | 24, length])
@@ -39,6 +41,7 @@ function mdoc({ country = "IN", chain = certificate, until = "2030-01-01T00:00:0
   const payload = encode({ tag: 24, value: encode(mso) });
   const toBeSigned = encode(["Signature1", protectedHeader, Buffer.alloc(0), payload]);
   const signature = sign("sha256", toBeSigned, { key, dsaEncoding: "ieee-p1363" });
+  // Replaces an element after signing, so its digest no longer matches.
   if (tamper) items[0] = { tag: 24, value: encode(new Map([["digestID", 0], ["random", randomBytes(24)], ["elementIdentifier", "fullName"], ["elementValue", "Someone Else"]])) };
   const issuerSigned = new Map([
     ["nameSpaces", new Map([["io.mosip.farmer.1", items]])],

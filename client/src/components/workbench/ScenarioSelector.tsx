@@ -6,6 +6,11 @@ import {
 import type { ScenarioId } from "../../../../server/models/scenarios";
 import type { Wallet } from "../../models/playground";
 
+// Test scenario picker used by the flow form and the rerun panel. Scenarios
+// that cannot run with this wallet and format are disabled, and the reasons
+// are listed under Scenario availability. fixtureAvailable and
+// didFixtureAvailable say whether the issuer advertises the expired and
+// unsupported-DID fixture configurations those scenarios need.
 export function ScenarioSelector({
   value,
   onChange,

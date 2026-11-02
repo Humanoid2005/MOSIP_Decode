@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Element defaults: visible focus rings for keyboard users, pointer and
+ * disabled cursors, and balanced wrapping for headings and paragraphs. */
 @layer base {
   body {
     @apply m-0 min-w-80 font-sans antialiased;
@@ -26,6 +28,8 @@
     @apply text-pretty;
   }
 }
+/* Shared component classes: primary and secondary buttons, form fields and
+ * the white card panel used across pages. */
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-teal-800 px-5 py-3 text-sm font-medium text-white hover:bg-teal-900 disabled:hover:bg-teal-800;
@@ -40,6 +44,8 @@
     @apply rounded-2xl border border-slate-200 bg-white;
   }
 }
+/* The sequence diagram keeps its natural width and scrolls inside its
+ * dialog rather than shrinking to fit. */
 @layer components {
   .sequence-diagram svg {
     @apply mx-auto h-auto max-w-none;
@@ -87,6 +93,8 @@
   outline: 2px solid #0f766e;
   outline-offset: 2px;
 }
+/* New messages fade in. Request lines have pathLength 1, so moving the dash
+ * offset from 1 to 0 draws them from sender to receiver. */
 @keyframes seq-fade {
   from {
     opacity: 0;
@@ -100,6 +108,7 @@
     stroke-dashoffset: 0;
   }
 }
+/* With reduced motion, new arrows appear at once and fully drawn. */
 @media (prefers-reduced-motion: reduce) {
   .sequence-diagram .seq-new,
   .sequence-diagram .messageLine0.seq-new {

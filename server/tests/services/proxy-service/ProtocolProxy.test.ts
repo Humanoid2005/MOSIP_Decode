@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import type { IncomingMessage } from "node:http";
 import { after, before, test } from "node:test";
 import { bridge, listen } from "./bridge.js";
+// ProtocolProxy forwarding: the path and method allowlist, an unconfigured
+// upstream, and byte-for-byte relaying.
 
 let upstream: Awaited<ReturnType<typeof listen>>;
 let proxy: Awaited<ReturnType<typeof bridge>>;
+// Requests that reached the stub upstream, which answers every one with 201
+// and a header the bridge must not relay.
 const received: {
   method?: string;
   url?: string;
@@ -59,6 +63,7 @@ test("reports an unconfigured upstream as a conflict", async () => {
 });
 
 test("forwards allowed requests byte-for-byte without cookies", async () => {
+  // The irregular spacing would not survive JSON re-serialisation.
   const body = '{"proof":{"jwt":"a.b.c"},  "format":"vc+sd-jwt"}';
   const response = await fetch(`${proxy.url}/bridge/certify/credential?x=1`, {
     method: "POST",

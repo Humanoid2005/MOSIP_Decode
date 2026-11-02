@@ -9,6 +9,8 @@ import { AssetRenderer } from "../AssetRenderer.mjs";
 import { RealmRenderer } from "../RealmRenderer.mjs";
 import { DatabaseRenderer } from "../DatabaseRenderer.mjs";
 
+// Covers rendered environment files, Verify and Mimoto trust settings, the
+// realm import and the Certify seed, rendered into temporary folders.
 const base = "https://inji.127.0.0.1.sslip.io";
 const local = new Configuration({
   INJI_LOCAL_DEVELOPMENT: "true",
@@ -25,6 +27,7 @@ const local = new Configuration({
   LOCAL_FARMER_PASSWORD: "secret",
 });
 
+// Renders assets and parses the files the tests inspect.
 async function render(configuration) {
   const output = await mkdtemp(join(tmpdir(), "inji-render-"));
   await new AssetRenderer(configuration).render(output);
@@ -62,6 +65,8 @@ test("mobile mode keeps browser wallets off and moves verifier trust", async () 
 
 test("new realms register Inji Mobile's public PKCE client", async () => {
   const output = await mkdtemp(join(tmpdir(), "inji-realm-"));
+  // RealmRenderer reads the tracked secrets/wallet-certificate.txt and writes
+  // into the database folder that DatabaseRenderer normally creates.
   await mkdir(join(output, "database"));
   await new RealmRenderer(local).render(output);
   const realm = JSON.parse(await readFile(join(output, "keycloak/inji-realm.json"), "utf8"));

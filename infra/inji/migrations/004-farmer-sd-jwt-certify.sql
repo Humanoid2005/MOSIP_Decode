@@ -1,3 +1,4 @@
+-- Runs in inji_certify as part of every fresh seed.
 BEGIN;
 -- SD-JWT variant of the farmer credential, signed with the existing ES256 (P-256) key.
 -- Copies the issuer DID, display and data-provider settings from the JSON-LD configuration.

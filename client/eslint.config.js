@@ -5,6 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+// The Vite React template's lint setup: recommended JavaScript and
+// typescript-eslint rules, the React hooks rules, and the react-refresh check
+// that keeps modules Fast Refresh compatible. Build output is ignored.
 export default defineConfig([
   globalIgnores(['dist']),
   {

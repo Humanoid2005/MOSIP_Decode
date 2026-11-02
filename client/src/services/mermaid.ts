@@ -6,6 +6,8 @@ let renders = 0;
 // Mermaid is large; load it only when a diagram is first opened.
 function load(): Promise<Mermaid> {
   loader ??= import("mermaid").then(({ default: mermaid }) => {
+    // Labels carry text from captured traffic, so Mermaid runs at its strict
+    // security level. The theme follows the app's teal and slate palette.
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
@@ -39,6 +41,8 @@ function load(): Promise<Mermaid> {
   return loader;
 }
 
+// Renders Mermaid source to an SVG string. Each render gets a new element ID,
+// because Mermaid scopes the SVG's styles under that ID.
 export async function renderSequence(source: string): Promise<string> {
   const mermaid = await load();
   const { svg } = await mermaid.render(`sequence-${++renders}`, source);

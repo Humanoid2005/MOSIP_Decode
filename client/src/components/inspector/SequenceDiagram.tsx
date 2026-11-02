@@ -4,6 +4,8 @@ import { buildSequence } from "../../services/sequenceDiagram";
 import { renderSequence } from "../../services/mermaid";
 import { ErrorNotice } from "../ui";
 
+// Mermaid's message labels and arrow lines, in drawing order, so index i
+// matches diagram.messages[i].
 const messageNodes = (root: HTMLElement) => ({
   texts: [...root.querySelectorAll<SVGTextElement>(".messageText")],
   lines: [
@@ -13,6 +15,10 @@ const messageNodes = (root: HTMLElement) => ({
   ],
 });
 
+// Live sequence diagram inside SequenceDialog. Each arrow can be clicked or
+// activated from the keyboard to select its captured event, whose arrows are
+// then highlighted. Failed exchanges are drawn in red, and new messages
+// animate in (the whole diagram on its first draw).
 export function SequenceDiagram({
   run,
   selectedId,
@@ -28,6 +34,8 @@ export function SequenceDiagram({
   const [error, setError] = useState<unknown>(null);
   // Query results keep their identity while unchanged, so polling does not redraw.
   const diagram = useMemo(() => buildSequence(run), [run]);
+  // Effect events read the latest onSelect and selectedId, so neither has to
+  // be a dependency of the render effect and a selection never redraws.
   const select = useEffectEvent(onSelect);
   const highlight = useEffectEvent((root: HTMLElement) => {
     const { texts, lines } = messageNodes(root);
@@ -38,6 +46,8 @@ export function SequenceDiagram({
     });
   });
 
+  // Redraws the SVG when the diagram changes, then styles and wires up each
+  // message. A render that finishes after a newer one has started is dropped.
   useEffect(() => {
     const { messages } = diagram;
     let cancelled = false;
@@ -102,6 +112,7 @@ export function SequenceDiagram({
     };
   }, [diagram]);
 
+  // Moves the highlight when the selection changes, without redrawing.
   useEffect(() => {
     if (container.current) highlight(container.current);
   }, [selectedId]);

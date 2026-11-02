@@ -11,13 +11,24 @@ import {
 } from "../run-service/credentialFingerprint.js";
 import type { ProtocolEvent } from "../../models/dtos.js";
 import { decodeMdoc, type MdocSummary } from "../run-service/mdoc.js";
+// The bridge's recorder. It attributes bridged traffic to the active run (only
+// one run is active at a time) and extracts evidence from it: the issued
+// credential's facts and fingerprint, scenario evidence, a decoded view of an
+// issued mDoc, and the playground's own checks on a submitted presentation.
 export class ProxyCaptureService {
+  // SHA-256 hashes of access tokens issued through the bridge, mapped to the
+  // run they were issued for; the oldest are dropped beyond 200.
   private readonly tokens = new Map<string, string>();
   constructor(
     private readonly dao: RunDao,
     private readonly runs: RunService,
     private readonly telemetry: TelemetryService,
   ) {}
+  // Returns the ID of the run a bridged request belongs to, or undefined.
+  // Verifier traffic must carry the run's request ID as its state or in its
+  // path (the run ID before a request exists). A /credential call belongs to
+  // the run only if its bearer token was issued to that run through the
+  // bridge; other issuer and token traffic belongs to it while it is issuing.
   identify(
     role: string,
     path: string,
@@ -42,6 +53,9 @@ export class ProxyCaptureService {
     }
     return active.phase === "ISSUING" ? active.id : undefined;
   }
+  // Runs the playground's own checks on a presentation submitted to the
+  // verifier and stores them, with the presented credential fingerprints, on
+  // the run. They are judged independently of Inji Verify's verdict.
   observeSubmission(
     id: string | undefined,
     path: string,
@@ -55,6 +69,12 @@ export class ProxyCaptureService {
     run.submittedFingerprints = evidence.fingerprints;
     this.dao.save(run);
   }
+  // Records a bridged exchange on its run. While the run is active, a
+  // successful token response links its access token to the run, and a
+  // credential response in the run's format is taken as the issued credential.
+  // Its fingerprint is kept to correlate the verifier's result, and an mDoc is
+  // kept for Verify's direct credential check (gap V4) and decoded into a
+  // separate inspection-only event.
   capture(
     id: string | undefined,
     path: string,
@@ -81,6 +101,8 @@ export class ProxyCaptureService {
         path.endsWith("/credential") &&
         matchesCredentialFormat(body.credential, run.configuration.format)
       ) {
+        // Issuer-side scenarios put the fault in the signed credential itself.
+        // Evidence is recorded only when the observed credential carries it.
         if (run.scenario === "EXPIRED_CREDENTIAL") {
           const credential =
             typeof body.credential === "string"
@@ -127,6 +149,9 @@ export class ProxyCaptureService {
             };
         }
         run.credentialObserved = true;
+        // Format, type and proof of the issued credential. Request-side
+        // scenarios use them to confirm that the request really mismatches
+        // what the wallet holds.
         try {
           if (run.configuration.format === "ldp_vc") {
             const credential = object(

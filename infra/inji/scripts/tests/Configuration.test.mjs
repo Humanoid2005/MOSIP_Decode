@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Configuration, validateOrigin } from "../Configuration.mjs";
 
+// Covers moving the configuration to a mobile origin and back, and origin
+// validation. EXTERNAL_URL shares the origin's text but not its host.
 const local = new Configuration({
   INJI_PUBLIC_ORIGIN: "https://inji.127.0.0.1.sslip.io",
   AUTHORIZATION_ISSUER_URL: "https://inji.127.0.0.1.sslip.io/auth/realms/inji",

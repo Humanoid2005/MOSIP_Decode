@@ -6,7 +6,11 @@ import type { RunService } from "../../../services/run-service/RunService.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { issueMdoc } from "../../credentials.js";
 import { testRun } from "../../fixtures.js";
+// ProxyCaptureService handling of a bridged /credential response for an mDoc
+// run.
 
+// Captures a /credential response carrying the given credential for an
+// Inji Mobile mDoc run, and returns the stored run.
 function capture(credential: unknown) {
   const dao = new InMemoryRunDao();
   dao.save(

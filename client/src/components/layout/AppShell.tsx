@@ -7,6 +7,9 @@ const links = [
   { to: "/inspector", label: "Protocol inspector", icon: SquareTerminal },
   { to: "/history", label: "Run history", icon: History },
 ];
+// Layout around every page: side navigation, a header showing whether live
+// updates are connected, and the routed page. It holds the app's single
+// WebSocket connection, so run data refreshes whichever page is open.
 export function AppShell() {
   const live = useTelemetry();
   return (

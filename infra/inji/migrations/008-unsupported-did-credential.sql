@@ -1,6 +1,10 @@
+-- Adds the unsupported-DID scenario's configuration to inji_certify (gap
+-- M10). Runs in local mode, in the fresh seed and on every upgrade.mjs run,
+-- so it must stay rerunnable.
 BEGIN;
 -- Certify signs this fixture with its existing development key and the deliberately unresolvable issuer identifier.
 INSERT INTO certify.credential_config
+-- Copies every column of the JSON-LD farmer row and overrides the keys below.
 SELECT (jsonb_populate_record(NULL::certify.credential_config,
     to_jsonb(source) || jsonb_build_object(
         'credential_config_key_id', 'FarmerCredentialUnsupportedDid',

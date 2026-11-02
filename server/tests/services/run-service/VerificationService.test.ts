@@ -7,7 +7,10 @@ import { VerificationService } from "../../../services/run-service/VerificationS
 import { ScenarioService } from "../../../services/scenario-service/ScenarioService.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { testRun } from "../../fixtures.js";
+// VerificationService error handling: which failures end the run and which
+// leave it retryable.
 
+// A VerificationService over one run in the given phase, with a stub verifier.
 function service(
   verifier: Partial<VerifierAdapter>,
   phase: "HELD" | "VERIFYING",

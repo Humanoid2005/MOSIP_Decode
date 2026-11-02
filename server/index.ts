@@ -1,5 +1,8 @@
 import { createApplication } from "./app.js";
 import { settings } from "./config/environment.js";
+// Server entry point. Exits if the port cannot be bound. On SIGINT or SIGTERM
+// it stops accepting connections, closes open ones and forces an exit if
+// shutdown takes longer than five seconds.
 const { server, shutdown } = createApplication();
 server.on("error", (error) => {
   console.error(`Inji playground API failed to start: ${error.message}`);

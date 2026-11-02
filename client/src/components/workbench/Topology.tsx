@@ -9,6 +9,10 @@ import { cn } from "../../services/cn";
 import type { TestRun } from "../../models/playground";
 import { walletName } from "../../services/presentation";
 import { SequenceDialog } from "../inspector/SequenceDialog";
+// Top of the workbench: the three-step progress bar with the sequence diagram
+// button, and cards for the issuer, holder and verifier. The current step is
+// Configure with no run, Issue & hold while issuing, and Present & verify
+// after that. The holder card names the run's wallet.
 export function Topology({ run }: { run?: TestRun }) {
   const step = !run ? 0 : run.phase === "ISSUING" ? 1 : 2;
   return (

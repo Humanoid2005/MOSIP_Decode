@@ -16,6 +16,14 @@ import { ErrorNotice } from "../ui";
 import { WalletHandoff } from "./WalletHandoff";
 import { MockWalletPanel } from "./MockWalletPanel";
 import { MimotoWalletPanel } from "../mimoto-wallet/MimotoWalletPanel";
+// The selected run on the workbench, laid out by phase. While issuing, the
+// embedded and mock wallets show their own panels; Inji Web and Inji Mobile
+// get the offer handoff, and the user confirms receipt because the playground
+// cannot see wallet storage. Once held, the user requests verification (for
+// mDoc, a direct Inji Verify credential check). While verifying, external
+// wallets get the presentation handoff, and the status can be checked again
+// after an error. A finished run shows its outcome, a scenario rerun and the
+// report export. An unfinished run can be stopped locally at any time.
 export function RunStage({ run }: { run: TestRun }) {
   const action = useRunAction();
   const select = useWorkspace((state) => state.selectRun);

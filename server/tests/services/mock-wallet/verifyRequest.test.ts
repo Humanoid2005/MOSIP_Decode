@@ -7,6 +7,8 @@ import {
 } from "../../../services/mock-wallet/verifyRequest.js";
 import { verifierIdentity } from "../../credentials.js";
 import { testRun, verifierDid } from "../../fixtures.js";
+// The mock wallet's authentication of the verifier's signed OpenID4VP
+// request: signature, algorithm and binding to this run's request.
 
 const definition = {
   id: "farmer-sd-jwt",
@@ -17,6 +19,8 @@ const run = testRun({
   requestId: "req-1",
   presentationExpectation: { nonce: "nonce-1", definition },
 });
+// A request object that matches run exactly; tests change one field at a
+// time.
 const payload = () => ({
   iss: verifierDid,
   client_id: verifierDid,
@@ -28,6 +32,7 @@ const payload = () => ({
   iat: Math.floor(Date.now() / 1000),
   presentation_definition: definition,
 });
+// Every rejected verifier request is reported as an upstream (502) error.
 const rejected = (error: unknown) =>
   error instanceof AppError && error.status === 502;
 

@@ -8,6 +8,10 @@ import {
 } from "../services/mimoto-wallet/MimotoApi";
 import { useWorkspace } from "../store/workspace";
 import { ErrorNotice } from "../components/ui";
+// Mimoto's redirect after sign-in, which the workbench shares with Inji Web.
+// Returns to the workbench if the sign-in started there (see
+// signInToWallet); otherwise continues to Inji Web's passcode page. The ref
+// stops StrictMode's repeated effect from redirecting twice.
 export function WalletLoginReturn() {
   const started = useRef(false);
   useEffect(() => {
@@ -20,12 +24,21 @@ export function WalletLoginReturn() {
   }, []);
   return <p role="status">Returning to your wallet…</p>;
 }
+// Keycloak's redirect after the user authorizes issuance into the embedded
+// wallet. The returned state must match the pending request that
+// MimotoWalletPanel saved before leaving; the server then has Mimoto redeem
+// the code and store the credential, and the browser returns to the
+// workbench with the updated run.
 export function WalletCallbackPage() {
   const started = useRef(false);
   const [error, setError] = useState<unknown>();
   const cache = useQueryClient();
   const navigate = useNavigate();
   const select = useWorkspace((state) => state.selectRun);
+  // Runs once, even under StrictMode, because an authorization code can be
+  // redeemed only once. The query string is cleared from the address bar
+  // straight away so the code does not stay in history, and the pending
+  // request is removed whatever the outcome.
   useEffect(() => {
     if (started.current) return;
     started.current = true;

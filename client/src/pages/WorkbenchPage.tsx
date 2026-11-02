@@ -6,6 +6,12 @@ import { FlowConfiguration } from "../components/workbench/FlowConfiguration";
 import { RunStage } from "../components/workbench/RunStage";
 import { ProtocolSummary } from "../components/workbench/ProtocolSummary";
 import { AccountStep } from "../components/mimoto-wallet/AccountStep";
+// The workbench at /. Below the optional account step and the step bar it
+// shows the flow form when no run is selected, otherwise the selected run's
+// current stage, beside the latest captured exchanges. Only one run can be in
+// progress, so the form is blocked while another run is active and a button
+// offers to resume it. If the selected run cannot be loaded, the user can
+// clear the selection and return to the default view.
 export function WorkbenchPage() {
   const current = useCurrentRun();
   const runs = useRuns();

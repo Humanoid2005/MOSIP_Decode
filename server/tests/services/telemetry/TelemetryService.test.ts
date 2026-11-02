@@ -4,7 +4,10 @@ import { InMemoryRunDao } from "../../../models/InMemoryRunDao.js";
 import type { ProtocolEvent } from "../../../models/dtos.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { testRun } from "../../fixtures.js";
+// TelemetryService: status poll coalescing, event retention and payload
+// redaction.
 
+// A Verify status poll event with the given status.
 const poll = (status: string): Omit<ProtocolEvent, "id" | "timestamp"> => ({
   source: "HTTP",
   title: "Presentation status",
@@ -55,6 +58,7 @@ test("keeps every exchange when coalescing is not requested", () => {
 test("long polling no longer evicts the earliest issuance evidence", () => {
   const { dao, telemetry } = setup();
   telemetry.record("run-1", { ...poll("issued"), title: "Credential issued" });
+  // More polls than the 300-event limit.
   for (let i = 0; i < 400; i++)
     telemetry.record("run-1", poll("ACTIVE"), { coalesce: true });
   assert.equal(dao.get("run-1").events[0]!.title, "Credential issued");

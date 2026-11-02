@@ -12,6 +12,9 @@ import { useWorkspace } from "../../store/workspace";
 import { ErrorNotice } from "../ui";
 import { ScenarioSelector } from "./ScenarioSelector";
 
+// "Rerun with a scenario" on a finished run: starts a new run with the same
+// wallet and credential, fresh issuance and the chosen scenario, linked to
+// this run as its parent. The original run stays in history.
 export function ReplayPanel({ run }: { run: TestRun }) {
   const [scenario, setScenario] = useState<ScenarioId>("BAD_SIGNATURE");
   const issuer = useQuery({
@@ -31,6 +34,9 @@ export function ReplayPanel({ run }: { run: TestRun }) {
       (item) => item.id === expiredConfigurationId,
     ),
   );
+  // A fixture configuration may only be used by its own scenario, so a run
+  // that used one is rerun from the base FarmerCredential. The server switches
+  // back to the fixture when the chosen scenario needs it.
   const configurationId = [
     expiredConfigurationId,
     unsupportedDidConfigurationId,

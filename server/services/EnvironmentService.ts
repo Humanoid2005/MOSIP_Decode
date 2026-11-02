@@ -1,5 +1,8 @@
 import type { Environment } from "../models/dtos.js";
 import { AppError, object } from "./errors.js";
+// Holds the Inji endpoints and identifiers the playground works against, read
+// once at startup from config/environment.ts. Each new run stores a copy, so a
+// run keeps the endpoints it started with.
 export class EnvironmentService {
   private readonly environment: Environment;
   constructor(initial: Environment) {
@@ -8,6 +11,10 @@ export class EnvironmentService {
   get(): Environment {
     return { ...this.environment };
   }
+  // Rejects malformed configuration at startup instead of on first use. URLs
+  // must be absolute HTTP(S) without credentials, query or fragment, and lose
+  // trailing slashes because callers append paths to them. Empty values are
+  // allowed; features that need them refuse to start, usually with 409.
   private validate(value: unknown): Environment {
     const input = object(value);
     const result = {} as Environment;
@@ -53,6 +60,8 @@ export class EnvironmentService {
     );
     return result;
   }
+  // Maps each credential format to the Inji Verify presentation definition ID
+  // used for its runs (INJI_PRESENTATION_DEFINITION_IDS).
   private definitionIds(value: unknown): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [format, id] of Object.entries(object(value))) {

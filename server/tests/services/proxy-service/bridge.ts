@@ -6,6 +6,8 @@ import { AppError } from "../../../services/errors.js";
 import { ProtocolProxy } from "../../../services/proxy-service/ProtocolProxy.js";
 import { testRun } from "../../fixtures.js";
 
+// Starts a server on a free loopback port. close() also drops keep-alive
+// connections, so tests do not hang on shutdown.
 export async function listen(handler: RequestListener) {
   const server = createServer(handler);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -20,6 +22,10 @@ export async function listen(handler: RequestListener) {
   };
 }
 
+// Stand-ins for the proxy's collaborators. identify picks the run for a
+// request, capture receives recorded exchanges, bridgeBody can rewrite the
+// forwarded body, and failures collects the arguments of each
+// ScenarioService.fail() call.
 export interface BridgeStubs {
   identify?: () => string | undefined;
   capture?: (...args: unknown[]) => void;
@@ -33,6 +39,8 @@ export interface BridgeStubs {
 
 // Mounts ProtocolProxy the way app.ts does, with stubbed observers.
 export async function bridge(upstreamUrl: string, stubs: BridgeStubs = {}) {
+  // The certify and verify bridges forward to the test upstream; the
+  // authorization bridge is left unconfigured.
   const environment = {
     ...testRun().environment,
     certifyUrl: upstreamUrl,

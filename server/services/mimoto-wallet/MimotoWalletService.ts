@@ -10,7 +10,12 @@ import type { MimotoClient } from "./MimotoClient.js";
 import type { MimotoIssuanceService } from "./MimotoIssuanceService.js";
 import type { MimotoPresentationService } from "./MimotoPresentationService.js";
 import { AppError, UpstreamError } from "../errors.js";
+// Entry point for the embedded Inji wallet ("Inji wallet · in this page").
+// Mimoto keeps the keys and the stored credential; this service binds each
+// wallet action to a run, checks the run's phase and the caller's Mimoto
+// session, and lets only one action per run proceed at a time.
 export class MimotoWalletService {
+  // Runs with a wallet action in flight; see exclusive().
   private readonly busy = new Set<string>();
   constructor(
     private readonly runs: RunService,
@@ -21,6 +26,9 @@ export class MimotoWalletService {
     private readonly presentation: MimotoPresentationService,
     private readonly scenarios: ScenarioService,
   ) {}
+  // Binds the run to the caller's Mimoto session and returns the issuer's
+  // authorization URL. The phase is checked again after the upstream calls,
+  // because the run may have failed or moved on while they were in flight.
   async authorize(id: string, walletId: string, context: MimotoContext) {
     return this.exclusive(id, async () => {
       const run = this.run(id, "ISSUING");
@@ -35,6 +43,11 @@ export class MimotoWalletService {
       return result;
     });
   }
+  // Handles the authorization callback: Mimoto redeems the code, downloads the
+  // credential and stores it, and the stored credential ID becomes the holder
+  // receipt. Session errors (401, 403, 423, 429) can be fixed by signing in or
+  // unlocking again; any other upstream failure fails the run at the storage
+  // stage, because the authorization code has already been consumed.
   async complete(
     id: string,
     state: string,
@@ -72,6 +85,8 @@ export class MimotoWalletService {
       );
     });
   }
+  // Hands the run's verifier request to Mimoto and returns what the user
+  // reviews before consenting: the verifier and the matching credential.
   async prepare(id: string, context: MimotoContext) {
     return this.exclusive(id, () =>
       this.presentation.prepare(
@@ -81,6 +96,8 @@ export class MimotoWalletService {
       ),
     );
   }
+  // Records the user's consent: Mimoto signs the presentation and submits it
+  // to the verifier. VerificationCoordinator collects the verdict afterwards.
   async submit(id: string, context: MimotoContext) {
     return this.exclusive(id, async () => {
       await this.presentation.submit(
@@ -91,6 +108,7 @@ export class MimotoWalletService {
       return this.dao.get(id);
     });
   }
+  // Loads the run and refuses wallet actions for other wallets or the wrong phase.
   private run(id: string, phase: string) {
     const run = this.dao.get(id);
     if (run.wallet !== "INJI_MIMOTO" || run.phase !== phase)
@@ -100,6 +118,8 @@ export class MimotoWalletService {
       );
     return run;
   }
+  // Only the Mimoto session that started the run may continue it, so a
+  // signed-in session in another browser cannot complete or present it.
   private session(id: string, context: MimotoContext) {
     const session = this.sessions.get(id);
     if (!session || session.owner !== this.client.owner(context))
@@ -109,6 +129,8 @@ export class MimotoWalletService {
       );
     return session;
   }
+  // Serializes wallet actions per run; a double click or a second tab gets 409
+  // instead of racing the same authorization code or presentation.
   private async exclusive<T>(id: string, action: () => Promise<T>) {
     if (this.busy.has(id))
       throw new AppError(409, "A wallet action is already in progress.");

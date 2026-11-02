@@ -1,8 +1,12 @@
 import type { TestRun } from "../models/dtos.js";
 import type { VerificationCheck } from "../models/verification.js";
+// Shared run fixtures for tests.
 
+// The test verifier's identifier, also used as the run's verifierClientId.
 export const verifierDid = "did:web:verifier.test:v1:verify";
 
+// A mock wallet SD-JWT run in ISSUING against test endpoints. Overrides
+// replace whole fields.
 export function testRun(overrides: Partial<TestRun> = {}): TestRun {
   const now = new Date().toISOString();
   return {
@@ -42,6 +46,7 @@ export function testRun(overrides: Partial<TestRun> = {}): TestRun {
   };
 }
 
+// A PLAYGROUND verification check with the given status.
 export function check(
   id: string,
   status: VerificationCheck["status"] = "PASS",

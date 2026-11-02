@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+// Listens on the /api/v1/events WebSocket and reports whether it is
+// connected. Messages only say that a run changed; the hook invalidates that
+// run and the run list so they are refetched over REST. Each connection
+// invalidates all run data to catch up on missed updates, and a dropped
+// socket reconnects after five seconds while polling carries on.
 export function useTelemetry() {
   const query = useQueryClient();
   const [connected, setConnected] = useState(false);

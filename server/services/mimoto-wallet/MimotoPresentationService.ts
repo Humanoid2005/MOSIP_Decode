@@ -6,11 +6,19 @@ import type {
 } from "../../models/MimotoSession.js";
 import type { MimotoClient } from "./MimotoClient.js";
 import { AppError, object, requiredString } from "../errors.js";
+// OpenID4VP presentation from the embedded wallet. Mimoto authenticates the
+// verifier's request, matches stored credentials, signs the presentation and
+// submits it; the workbench only relays the user's review and consent.
 export class MimotoPresentationService {
   constructor(
     private readonly client: MimotoClient,
     private readonly scenarios: ScenarioService,
   ) {}
+  // Opens the verifier request in Mimoto and checks that it names the expected
+  // verifier and that the credential issued in this run matches it. A failed
+  // match fails the run at the wallet-matching stage, which is how the
+  // request-side fault tests surface for Inji wallets. The result is cached on
+  // the session so a page reload does not open a second presentation.
   async prepare(run: TestRun, session: MimotoSession, context: MimotoContext) {
     if (session.presentation) return session.presentation;
     if (!session.credentialId)
@@ -86,6 +94,8 @@ export class MimotoPresentationService {
     };
     return session.presentation;
   }
+  // Shares the reviewed credential. Repeating the call after success does
+  // nothing, so a retried request cannot submit the presentation twice.
   async submit(run: TestRun, session: MimotoSession, context: MimotoContext) {
     const presentation = session.presentation;
     if (!presentation)

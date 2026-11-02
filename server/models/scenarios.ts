@@ -1,6 +1,8 @@
 import type { TestRun, Wallet } from "./dtos.js";
 import { checkStatus, type VerificationCheck } from "./verification.js";
 
+// The negative-scenario catalog and the rules that score a run. Pure and
+// shared with the client, so the workbench and the report score runs alike.
 export type ScenarioId =
   | "NONE"
   | "BAD_SIGNATURE"
@@ -12,6 +14,7 @@ export type ScenarioId =
   | "UNSUPPORTED_DID"
   | "WRONG_NONCE"
   | "QR_LIMIT";
+// Where a run stopped or where a scenario took effect.
 export type FailureStage =
   | "ISSUANCE"
   | "REQUEST"
@@ -26,7 +29,11 @@ export interface ScenarioDefinition {
   description: string;
   expected: string;
 }
+// What a scenario changed and what the run showed, recorded by
+// ScenarioService, the bridge capture and the wallets.
 export interface ScenarioEvidence {
+  // True once the change actually took effect; until then the scenario
+  // cannot pass.
   applied: boolean;
   stage?: FailureStage;
   errorCode?: string;
@@ -34,19 +41,26 @@ export interface ScenarioEvidence {
   originalFingerprint?: string;
   submittedFingerprint?: string;
   changes?: { path: string; before: unknown; after: unknown }[];
+  // True when scenarioOutcome() scores the run as a pass.
   rejectionReasonConfirmed?: boolean;
   mutationNote?: string;
+  // Which signature a signature or claim mutation invalidated.
   target?: "PRESENTATION_SIGNATURE" | "CREDENTIAL_SIGNATURE";
+  // Direct Verify checks of the original and the modified credential, which
+  // isolate the issuer-signature failure for credential mutations.
   controls?: {
     originalValid: boolean;
     modifiedSignatureRejected: boolean;
     errorCode?: string;
   };
+  // The issued credential really differs from what a mismatch scenario's
+  // request asks for.
   matchingMismatchConfirmed?: boolean;
 }
 export type ScenarioOutcome =
   "PENDING" | "PASS" | "FAIL" | "INCONCLUSIVE" | "CANCELLED";
 
+// Scenario catalog shown in the workbench and named in reports.
 export const scenarios: ScenarioDefinition[] = [
   {
     id: "NONE",
@@ -119,8 +133,12 @@ export const scenarios: ScenarioDefinition[] = [
   },
 ];
 
+// Dedicated Certify configurations for the expired and unresolvable-DID
+// fixtures. RunService issues them in place of the selected configuration.
 export const expiredConfigurationId = "FarmerCredentialExpired";
 export const unsupportedDidConfigurationId = "FarmerCredentialUnsupportedDid";
+// A handoff link of qrByteLimit UTF-8 bytes or more is shown as a copyable
+// link instead of a QR code.
 export const qrByteLimit = 2000;
 export function qrHandoff(value: string) {
   const bytes = new TextEncoder().encode(value).length;
@@ -129,6 +147,10 @@ export function qrHandoff(value: string) {
 export function scenarioDefinition(id: ScenarioId) {
   return scenarios.find((item) => item.id === id)!;
 }
+// Why a scenario cannot run with this wallet and format, or undefined if it
+// can. The flags say whether the issuer advertises the expired and
+// unsupported-DID fixtures. mDoc allows only the normal flow (gap V4).
+// Checked by RunService and by the workbench.
 export function scenarioUnavailable(
   id: ScenarioId,
   wallet: Wallet,
@@ -155,6 +177,8 @@ export function scenarioUnavailable(
     return "Inji wallets support signature and claim mutations for JSON-LD only. Use the mock wallet for SD-JWT.";
   return undefined;
 }
+// Refuses mDoc for Inji Web and the embedded wallet, since Mimoto cannot
+// download it (gap M12).
 // The mock wallet's SD-JWT-only restriction is enforced separately.
 export function mdocWalletUnsupported(
   wallet: Wallet,
@@ -164,6 +188,8 @@ export function mdocWalletUnsupported(
     return undefined;
   return "Mimoto 0.21 has no mso_mdoc format handler, so Inji Web cannot download mDoc credentials. Use Inji Mobile.";
 }
+// The playground's holder binding checks passed: the JSON-LD presentation
+// holder check, or all three SD-JWT Key Binding JWT checks.
 function holderBindingConfirmed(
   checks: VerificationCheck[] | undefined,
 ): boolean {
@@ -183,6 +209,9 @@ const scenarioTargets: Partial<Record<ScenarioId, string>> = {
   FORMAT_MISMATCH: "requested-format",
   PROOF_MISMATCH: "requested-proof",
 };
+// The playground's request-binding checks. When the verifier decided, a
+// scenario can pass only if all of them pass except its own target, which
+// must fail.
 const bindingChecks = [
   "state",
   "definition",
@@ -197,6 +226,10 @@ const bindingChecks = [
   "result-correlation",
 ];
 
+// Scores a finished run against its scenario. PASS: the stack rejected the
+// change for the expected reason. FAIL: the verifier accepted it.
+// INCONCLUSIVE: the evidence cannot attribute the result to the change. The
+// normal flow is scored by interoperabilityOutcome().
 export function scenarioOutcome(
   run: Pick<
     TestRun,
@@ -215,6 +248,8 @@ export function scenarioOutcome(
   if (run.scenario === "NONE") return interoperabilityOutcome(run);
   if (!run.scenarioEvidence?.applied) return "INCONCLUSIVE";
   if (run.scenario === "QR_LIMIT") return "INCONCLUSIVE";
+  // The embedded wallet refusing to match a mismatched request is the
+  // expected rejection for the three constraint scenarios.
   if (
     run.scenarioEvidence.stage === "WALLET_MATCHING" &&
     run.scenarioEvidence.errorCode === "NO_MATCHING_CREDENTIAL"
@@ -239,6 +274,8 @@ export function scenarioOutcome(
     )
   )
     return "INCONCLUSIVE";
+  // Checks that may fail for the scenario's own reason. Any other failure
+  // makes the run inconclusive.
   const allowedFailures =
     run.scenario === "WRONG_NONCE"
       ? ["nonce", "holder-proof"]
@@ -279,6 +316,9 @@ export function scenarioOutcome(
       checkStatus(checks, "expiry") === "FAIL"
       ? "PASS"
       : "INCONCLUSIVE";
+  // A broken presentation proof must fail only Verify's holder proof. A changed
+  // credential must fail its issuer signature, and the direct controls must
+  // show that the original verifies while the changed copy does not.
   if (["BAD_SIGNATURE", "MODIFIED_CLAIM"].includes(run.scenario)) {
     const evidence = run.scenarioEvidence;
     if (checkStatus(checks, "result-correlation") !== "PASS")
@@ -300,6 +340,11 @@ export function scenarioOutcome(
   return "INCONCLUSIVE";
 }
 
+// Scores the normal flow. PASS needs Verify's acceptance, every check passing
+// (credential status may be not applicable), the playground's holder binding,
+// and a credential that was observed, held and matched to the one verified. A
+// failed run, a negative verdict or any failed check is FAIL; missing evidence
+// is INCONCLUSIVE.
 export function interoperabilityOutcome(
   run: Pick<
     TestRun,

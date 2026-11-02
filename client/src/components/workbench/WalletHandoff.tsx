@@ -3,6 +3,12 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Copy, ExternalLink, ScanLine } from "lucide-react";
 import { copyText } from "../../services/clipboard";
+// Hands a credential offer or presentation request to Inji Web or Inji Mobile
+// as a QR code, a deep link and a copyable link. A URI too large to scan
+// reliably gets no QR code. RunStage turns deepLink off for Inji Mobile
+// offers, which are scanned in the app; webUrl and webPresentationUrl add
+// Inji Web buttons. Without a URI, the user is told to start the download
+// from the wallet itself.
 export function WalletHandoff({
   uri,
   webUrl,

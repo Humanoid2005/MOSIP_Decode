@@ -1,10 +1,16 @@
 import { Router } from "express";
 import type { MockWalletService } from "../services/mock-wallet/MockWalletService.js";
 import { AppError } from "../services/errors.js";
+// Minimal HTML page for the browser tab that the authorization redirect
+// lands in. Text is escaped because it can include the authorization
+// server's error_description from the query string.
 const escape = (value: string) =>
   value.replace(/[&<>"']/g, (character) => `&#${character.charCodeAt(0)};`);
 const page = (title: string, message: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#0f172a}p{color:#475569;line-height:1.6}</style></head><body><h1>${escape(title)}</h1><p>${escape(message)}</p></body></html>`;
+// Routes for the playground's non-Inji mock wallet. The workbench starts
+// authorization and presentation; the authorization server redirects the
+// user's browser to the callback.
 export function mockWalletRoutes(wallet: MockWalletService) {
   const router = Router();
   router.post("/runs/:id/mock-wallet/authorize", async (req, res) =>
@@ -13,6 +19,8 @@ export function mockWalletRoutes(wallet: MockWalletService) {
   router.post("/runs/:id/mock-wallet/present", async (req, res) =>
     res.json(await wallet.present(req.params.id)),
   );
+  // Redirect target of the mock wallet's authorization request. It runs in the
+  // user's browser tab, so it answers with an HTML page, also on failure.
   router.get("/mock-wallet/callback", async (req, res) => {
     const { code, state, error, error_description: description } = req.query;
     try {

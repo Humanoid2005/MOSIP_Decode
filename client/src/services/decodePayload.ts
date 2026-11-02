@@ -1,3 +1,4 @@
+// Decodes one base64url segment as UTF-8 JSON.
 function decodePart(value: string): unknown {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   return JSON.parse(
@@ -9,6 +10,11 @@ function decodePart(value: string): unknown {
     ),
   );
 }
+// Backs the payload view's "Decode JWT / SD-JWT" toggle. Walks a captured
+// payload and expands every compact JWT or SD-JWT (jwt~disclosure~…) into its
+// header, claims, signature and disclosures; a trailing key binding JWT is
+// decoded as a JWT. Signatures are not checked, and the output says so.
+// Strings that are not JWTs or fail to decode are left as they are.
 export function decodePayload(value: unknown, depth = 0): unknown {
   if (depth > 20) return "[depth limit]";
   if (Array.isArray(value))

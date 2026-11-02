@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { phoneReachability } from "../../models/mobile.js";
+// phoneReachability(): which issuer origins a phone running Inji Mobile can
+// reach and trust.
 
 test("public HTTPS origins are reachable from a phone", () => {
   for (const origin of [

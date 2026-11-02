@@ -6,10 +6,14 @@ import { ScenarioService } from "../../../services/scenario-service/ScenarioServ
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { testRun } from "../../fixtures.js";
 import { bridge, listen } from "./bridge.js";
+// ProtocolProxy recording and run failure: observer errors, upstream outages,
+// issuer and verifier rejections, and presentations that cannot be mutated.
 
 let upstream: Awaited<ReturnType<typeof listen>>;
 
 before(async () => {
+  // Answers 400 with the posted error, adding a fresh c_nonce when the body
+  // asks for one, and 200 otherwise.
   upstream = await listen((req, res) => {
     const chunks: Buffer[] = [];
     req.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -29,6 +33,7 @@ before(async () => {
 });
 after(() => upstream.close());
 
+// Sends one request through a new bridge with the given stubs.
 async function send(
   path: string,
   stubs: Parameters<typeof bridge>[1],
@@ -47,6 +52,7 @@ async function send(
 }
 
 test("an observer failure does not replace a successful upstream response", async () => {
+  // The proxy logs observer failures; the expected log is silenced.
   const logged = console.error;
   console.error = () => {};
   try {
@@ -78,6 +84,7 @@ test("relays upstream bytes without adding an ETag", async () => {
 
 test("an unreachable upstream is a 502 recorded as a connection failure", async () => {
   const captured: unknown[] = [];
+  // Nothing listens on port 1.
   const proxy = await bridge("http://127.0.0.1:1", {
     identify: () => "run-1",
     capture: (...args: unknown[]) => void captured.push(args),
@@ -153,6 +160,7 @@ test("fails the run when the verifier rejects a submission", async () => {
 });
 
 test("a presentation that cannot be mutated fails the run with its cause", async () => {
+  // A presentation with no credential to mutate, and a body that is not JSON.
   for (const body of ['{"vp_token":{"proof":{}}}', "{not json"]) {
     const dao = new InMemoryRunDao();
     dao.save(

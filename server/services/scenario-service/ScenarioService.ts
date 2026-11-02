@@ -8,6 +8,10 @@ import { credentialFingerprint } from "../run-service/credentialFingerprint.js";
 import { AppError, object } from "../errors.js";
 import { decodeJwt } from "../mock-wallet/jws.js";
 
+// Applies the negative scenarios and records their evidence on the run. It
+// alters the verifier's presentation definition for the mismatch scenarios
+// and mutates a copy of the credential or presentation for the signature and
+// claim scenarios. It is also the shared way to fail a run at a named stage.
 export class ScenarioService {
   constructor(
     private readonly dao: RunDao,
@@ -15,6 +19,9 @@ export class ScenarioService {
     private readonly http: ObservedHttpClient,
   ) {}
 
+  // Merges evidence into the run's scenario record and logs it as a SCENARIO
+  // event. rejectionReasonConfirmed is recomputed on every update so it
+  // follows the current outcome.
   record(id: string, evidence: Partial<ScenarioEvidence>) {
     const run = this.dao.get(id);
     run.scenarioEvidence = { ...run.scenarioEvidence, ...evidence };
@@ -33,12 +40,21 @@ export class ScenarioService {
     });
   }
 
+  // Stores the nonce and the presentation definition actually sent to Inji
+  // Verify. The bridge's presentation checks compare the submission with
+  // them, and the mock wallet checks the signed request against them.
   expect(id: string, nonce: string, definition: JsonObject) {
     const run = this.dao.get(id);
     run.presentationExpectation = { nonce, definition };
     this.dao.save(run);
   }
 
+  // Controls for the credential mutations: the original and the modified
+  // credential are each sent to Verify's direct credential check. The original
+  // must verify and match a credential issued in this run, and the modified
+  // one must fail with a signature error, which isolates the issuer-signature
+  // failure from the enclosing presentation. If the controls cannot run they
+  // are recorded as CONTROL_UNAVAILABLE, and the scenario stays inconclusive.
   async controls(run: TestRun, original: unknown, modified: unknown) {
     try {
       const verify = async (credential: unknown, label: string) =>
@@ -85,6 +101,13 @@ export class ScenarioService {
     }
   }
 
+  // For the wrong type, format and proof scenarios, replaces the configured
+  // presentation definition, under a derived ID, with one input descriptor
+  // the issued credential does not satisfy: a type pattern nothing issued
+  // matches, the other credential format, or an RSA proof suite or algorithm.
+  // matchingMismatchConfirmed records, from the bridge-observed issued
+  // credential, that it really differs from the request; neither a wallet's
+  // refusal to match nor a verifier rejection scores a pass without it.
   definition(run: TestRun, original: JsonObject): JsonObject {
     if (
       !["WRONG_TYPE", "FORMAT_MISMATCH", "PROOF_MISMATCH"].includes(
@@ -166,6 +189,13 @@ export class ScenarioService {
     return definition;
   }
 
+  // Mutates a copy of the held credential for the bad signature and modified
+  // claim scenarios; the wallet's stored credential is never changed. The mock
+  // wallet calls this for its SD-JWT before signing the Key Binding JWT: one
+  // issuer signature byte is flipped, or the signed id claim is changed
+  // without re-signing. The bridge calls it for a JSON-LD modified claim,
+  // which changes credentialSubject.fullName. The controls then run on the
+  // original and the modified credential.
   async credential(run: TestRun, original: unknown): Promise<unknown> {
     if (!["BAD_SIGNATURE", "MODIFIED_CLAIM"].includes(run.scenario))
       return original;
@@ -242,6 +272,12 @@ export class ScenarioService {
     return modified;
   }
 
+  // Called by the bridge for each request before it is forwarded. An Inji
+  // wallet's presentation submission in the bad signature or modified claim
+  // scenario is returned mutated; everything else passes through unchanged.
+  // The mock wallet is excluded because it mutates its SD-JWT before signing.
+  // If mutation fails, the run fails and the thrown error stops the bridge
+  // from forwarding the unmodified submission.
   async bridgeBody(
     id: string | undefined,
     path: string,
@@ -270,6 +306,11 @@ export class ScenarioService {
     }
   }
 
+  // Rewrites a JSON-LD presentation submission, form-encoded or JSON. Bad
+  // signature flips one byte of the presentation proof's detached JWS
+  // signature and leaves the credential untouched; modified claim replaces the
+  // single credential with a mutated copy from credential(). The body is
+  // re-encoded the way it arrived.
   private async mutateSubmission(
     run: TestRun,
     body: Buffer,
@@ -331,6 +372,10 @@ export class ScenarioService {
     );
   }
 
+  // Ends an active run as FAILED at the given stage, records the error code
+  // and clears the offer and presentation links. A run that has already
+  // finished is left alone, so a late failure cannot overwrite a result or a
+  // cancellation.
   fail(id: string, stage: FailureStage, errorCode: string, detail: string) {
     const run = this.dao.get(id);
     if (!["ISSUING", "HELD", "VERIFYING"].includes(run.phase)) return;

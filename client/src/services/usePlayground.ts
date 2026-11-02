@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/PlaygroundApi";
 import { useWorkspace } from "../store/workspace";
+// Run summaries for the history page, the inspector's run picker and
+// active-run detection. Polls every five seconds as a fallback for the
+// WebSocket notifications handled in useTelemetry.
 export function useRuns() {
   return useQuery({
     queryKey: ["runs"],
@@ -9,6 +12,8 @@ export function useRuns() {
     refetchInterval: 5000,
   });
 }
+// The server's stack settings. They are fixed when the server starts, so the
+// result never goes stale on its own.
 export function useEnvironment() {
   return useQuery({
     queryKey: ["environment"],
@@ -17,6 +22,9 @@ export function useEnvironment() {
   });
 }
 const finishedPhases = ["COMPLETED", "FAILED", "CANCELLED"];
+// The run shown on the workbench and in the inspector: the user's selection,
+// otherwise the run in progress. It polls every four seconds until the run
+// finishes; WebSocket notifications refresh it sooner.
 export function useCurrentRun() {
   const selected = useWorkspace((state) => state.selectedRunId);
   const select = useWorkspace((state) => state.selectRun);
@@ -37,6 +45,8 @@ export function useCurrentRun() {
       finishedPhases.includes(query.state.data?.phase ?? "") ? false : 4000,
   });
 }
+// Posts a run action and writes the returned run straight into the cache, so
+// the stage updates without waiting for the next poll.
 export function useRunAction() {
   const client = useQueryClient();
   return useMutation({

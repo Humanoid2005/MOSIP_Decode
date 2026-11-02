@@ -16,9 +16,16 @@ import { formatName } from "../../services/presentation";
 import { ErrorNotice, Loading } from "../ui";
 import type { Wallet } from "../../models/playground";
 import { MobileReadiness } from "./MobileReadiness";
+// The "Configure" step, shown on the workbench when no run is selected: pick a
+// holder wallet, a credential the issuer advertises and a test scenario, then
+// start issuance. blocked is set while another run is active. A pasted offer
+// is sent only for Inji Web and Inji Mobile; the embedded and mock wallets
+// start issuance themselves.
 export function FlowConfiguration({ blocked }: { blocked: boolean }) {
   const env = useEnvironment();
   const configured = Boolean(env.data?.certifyUrl && env.data?.issuerUrl);
+  // Live issuer discovery, run once the issuer is configured. ReplayPanel
+  // shares the same cached result.
   const discovery = useQuery({
     queryKey: ["issuer"],
     queryFn: api.discovery,
@@ -26,6 +33,8 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
     staleTime: 60000,
   });
   const [selectedWallet, setWallet] = useState<Wallet>();
+  // Until the user chooses, defaults to the embedded wallet when it is
+  // configured, then Inji Web, then Inji Mobile.
   const wallet =
     selectedWallet ??
     (env.data?.embeddedWalletUrl
@@ -38,6 +47,7 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
   const [offer, setOffer] = useState("");
   const select = useWorkspace((state) => state.selectRun);
   const client = useQueryClient();
+  // Selecting and caching the new run replaces this form with its run stage.
   const start = useMutation({
     mutationFn: api.start,
     onSuccess: (run) => {
@@ -47,6 +57,9 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
       void client.invalidateQueries({ queryKey: ["runs"] });
     },
   });
+  // The expired and unsupported-DID configurations are fixtures for negative
+  // scenarios, so they are not offered as credentials. Whether the issuer
+  // advertises them decides if those scenarios are available.
   const options = (discovery.data?.configurations || []).filter(
     (item) =>
       ![expiredConfigurationId, unsupportedDidConfigurationId].includes(
@@ -72,6 +85,11 @@ export function FlowConfiguration({ blocked }: { blocked: boolean }) {
         ),
       )
     : undefined;
+  // Wallet and format pairs the pinned stack cannot complete, each of which
+  // disables Start: the mock wallet handles SD-JWT only, the embedded Mimoto
+  // wallet presents JSON-LD only, and Mimoto cannot download mDoc for Inji
+  // Web or the embedded wallet. The embedded wallet also needs the secure
+  // workbench origin, so the button becomes a link there.
   const mdoc = choice?.format === "mso_mdoc";
   const mockUnsupported =
     wallet === "MOCK_WALLET" && (choice?.format === "ldp_vc" || mdoc);

@@ -32,7 +32,14 @@ import { mimotoWalletRoutes } from "./controllers/mimotoWallet.js";
 
 import { ScenarioService } from "./services/scenario-service/ScenarioService.js";
 
+// Composition root. Builds each service once, injects dependencies through
+// constructors and mounts the HTTP surface. Returns the Express app, the HTTP
+// server with the event socket and result poller attached, and a shutdown
+// hook that closes sockets and open connections.
 export function createApplication() {
+  // Shared services. Orchestrator calls to the Inji services go through
+  // ObservedHttpClient, which records them on the run; the wallets use the
+  // plain client and record their own events.
   const dao = new InMemoryRunDao();
   const environment = new EnvironmentService(initialEnvironment);
   const http = new HttpClient();
@@ -53,6 +60,8 @@ export function createApplication() {
     telemetry,
     scenarios,
   );
+  // The mock wallet's redirect URI is on the workbench origin, whose /api path
+  // is proxied to this server.
   const wallet = new MockWalletService(
     dao,
     new InMemoryWalletSessionDao(),
@@ -73,6 +82,7 @@ export function createApplication() {
     new MimotoPresentationService(mimoto, scenarios),
     scenarios,
   );
+  // The embedded wallet API accepts requests from this origin only.
   const embeddedOrigin = initialEnvironment.embeddedWalletUrl
     ? new URL(initialEnvironment.embeddedWalletUrl).origin
     : "";
@@ -83,10 +93,13 @@ export function createApplication() {
   );
   const app = express();
   app.disable("x-powered-by");
+  // Run state changes continuously, so no response may be cached.
   app.use((_req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
     next();
   });
+  // Protocol bridge. Mounted before the CORS and JSON middleware, so the
+  // proxy receives the exact bytes the wallet sent.
   app.use(
     "/bridge",
     express.raw({ type: () => true, limit: "5mb" }),
@@ -94,6 +107,10 @@ export function createApplication() {
       proxy.forward(req, res).catch(next);
     },
   );
+  // Origins allowed to call the API and open the event socket: the workbench,
+  // the embedded wallet page and this server. A loopback workbench origin is
+  // also allowed under its other name, because browsers treat localhost and
+  // 127.0.0.1 as different origins.
   const origins = [
     settings.clientOrigin,
     ...(embeddedOrigin ? [embeddedOrigin] : []),
@@ -106,6 +123,9 @@ export function createApplication() {
       clientOrigin.hostname === "localhost" ? "127.0.0.1" : "localhost";
     origins.push(clientOrigin.origin);
   }
+  // API guard: a request with an Origin header must come from an allowed
+  // origin, and state-changing requests must be JSON, which an HTML form on
+  // another site cannot send.
   app.use("/api", (req, _res, next) => {
     if (req.headers.origin && !origins.includes(req.headers.origin))
       return next(new AppError(403, "Origin not allowed."));
@@ -116,8 +136,10 @@ export function createApplication() {
       return next(new AppError(415, "Use application/json for API requests."));
     next();
   });
+  // CORS for the allowed origins, and a 256 KB limit on JSON bodies.
   app.use(cors({ origin: origins }));
   app.use(express.json({ limit: "256kb" }));
+  // Playground and mock wallet APIs.
   app.use(
     "/api/v1",
     apiRoutes({
@@ -130,11 +152,16 @@ export function createApplication() {
     }),
   );
   app.use("/api/v1", mockWalletRoutes(wallet));
+  // Embedded wallet API, under Mimoto's cookie path. The gateway routes this
+  // prefix to the playground server.
   app.use(
     "/v1/mimoto/playground",
     mimotoWalletRoutes(embeddedWallet, embeddedOrigin),
   );
   app.use((_req, _res, next) => next(new AppError(404, "Endpoint not found.")));
+  // Every error becomes {"error": message}. AppError and HTTP errors marked as
+  // exposable keep their status, malformed JSON is 400, and anything else is
+  // logged and returned as a generic 500 so internals do not leak.
   const errors: ErrorRequestHandler = (error, _req, res, next) => {
     if (res.headersSent) return next(error);
     const status =
@@ -151,6 +178,9 @@ export function createApplication() {
     });
   };
   app.use(errors);
+  // VerificationCoordinator polls Inji Verify for the active run once the
+  // server is listening. TelemetrySocket serves /api/v1/events to the allowed
+  // origins and pushes a notice whenever a run changes.
   const server = createServer(app);
   new VerificationCoordinator(dao, verification).attach(server);
   const closeSockets = new TelemetrySocket().attach(server, telemetry, origins);

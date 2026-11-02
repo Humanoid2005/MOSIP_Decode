@@ -1,6 +1,8 @@
 import { MobileMode } from "./mobile/MobileMode.mjs";
 import { Rehearsal } from "./mobile/Rehearsal.mjs";
 
+// Switches the running stack to or from a phone-reachable origin for Inji
+// Mobile, reports its state, or rehearses a phone session without a phone.
 // node infra/inji/scripts/mobile.mjs start [--origin https://stable.example] | stop | status
 //   | rehearse [--format vc+sd-jwt|ldp_vc|mso_mdoc]
 const [command = "status", ...args] = process.argv.slice(2);
@@ -8,6 +10,7 @@ const option = (name) =>
   args.includes(name) ? args[args.indexOf(name) + 1] : undefined;
 const mode = new MobileMode();
 
+// Prints the MobileDoctor results and exits non-zero if any check failed.
 function report(checks) {
   for (const check of checks)
     console.log(`${check.ok ? "PASS" : "FAIL"}  ${check.name}: ${check.detail}`);

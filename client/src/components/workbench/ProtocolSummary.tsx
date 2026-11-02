@@ -1,6 +1,9 @@
 import { Link } from "react-router";
 import { ArrowRight, SquareTerminal } from "lucide-react";
 import type { TestRun } from "../../models/playground";
+// Sidebar beside the workbench stage: the current run's last four captured
+// exchanges and a link to the protocol inspector. A user confirmation has no
+// HTTP status, so it is labelled Confirmed.
 export function ProtocolSummary({ run }: { run?: TestRun }) {
   return (
     <aside className="space-y-5">

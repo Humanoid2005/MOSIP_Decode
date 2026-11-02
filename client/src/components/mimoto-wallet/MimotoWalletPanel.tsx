@@ -10,6 +10,12 @@ import {
 import { ErrorNotice } from "../ui";
 import { WalletUnlock } from "./WalletUnlock";
 import { WalletConsent } from "./WalletConsent";
+// The embedded Inji wallet inside the run stage while the run is issuing or
+// verifying. It leads the user through sign-in, unlocking, authorizing
+// issuance and, during verification, consent to share. It needs Mimoto's
+// session cookie, so on any origin other than the secure workbench it links
+// there instead. Refresh wallet session forgets the unlocked wallet and checks
+// the session again.
 export function MimotoWalletPanel({ run }: { run: TestRun }) {
   const secure =
     location.origin === new URL(run.environment.embeddedWalletUrl).origin;
@@ -21,6 +27,8 @@ export function MimotoWalletPanel({ run }: { run: TestRun }) {
     retry: false,
   });
   const candidate = unlockedId || wallets.data?.[0]?.walletId;
+  // Mimoto lists credentials only for an unlocked wallet, so a successful
+  // listing means the PIN step can be skipped.
   const credentials = useQuery({
     queryKey: ["mimoto-credentials", candidate],
     queryFn: () => mimotoApi.credentials(candidate!),
@@ -28,6 +36,8 @@ export function MimotoWalletPanel({ run }: { run: TestRun }) {
     retry: false,
   });
   const walletId = unlockedId || (credentials.isSuccess ? candidate : "");
+  // Saves the run ID and the request's state before leaving for the issuer's
+  // authorization page, so WalletCallbackPage can match the response to it.
   const authorize = useMutation({
     mutationFn: async () => {
       const { url } = await mimotoApi.authorize(run.id, walletId!);

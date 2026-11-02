@@ -11,7 +11,12 @@ import {
   signEs256,
 } from "../services/mock-wallet/jws.js";
 import { verifierDid } from "./fixtures.js";
+// Synthetic credentials, verifier identities and a small CBOR encoder for
+// tests.
 
+// Issues an SD-JWT with one disclosure per claim, bound to the holder through
+// cnf.jwk and signed by a throwaway issuer key. Like an issuer's response, it
+// ends in "~" with no Key Binding JWT.
 export function issueSdJwt(
   holder: HolderKey,
   claims: Record<string, unknown> = {
@@ -35,6 +40,8 @@ export function issueSdJwt(
   return `${signEs256({ typ: "vc+sd-jwt" }, payload, issuer)}~${disclosures.join("~")}~`;
 }
 
+// Base58 (Bitcoin alphabet) for the multibase key in the verifier's DID
+// document.
 function base58(bytes: Buffer): string {
   const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   let number = BigInt(`0x${bytes.toString("hex")}`);
@@ -50,6 +57,9 @@ function base58(bytes: Buffer): string {
   return encoded;
 }
 
+// A new Ed25519 verifier key with its did:web document, and a signer for
+// OpenID4VP request objects under that key. Each call makes a different key,
+// so two identities can model a request signed by the wrong key.
 export function verifierIdentity() {
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
   const raw = Buffer.from(publicKey.export({ format: "jwk" }).x!, "base64url");
@@ -76,6 +86,7 @@ export function verifierIdentity() {
   return { document, signRequest };
 }
 
+// Values encodeCbor() accepts; { tag, value } is a tagged item.
 export type Cbor =
   | number
   | string
@@ -85,6 +96,7 @@ export type Cbor =
   | Cbor[]
   | Map<Cbor, Cbor>
   | { tag: number; value: Cbor };
+// Major type and length header; lengths up to 32 bits.
 function cborHead(major: number, length: number): Buffer {
   if (length < 24) return Buffer.from([(major << 5) | length]);
   if (length < 256) return Buffer.from([(major << 5) | 24, length]);
@@ -93,6 +105,7 @@ function cborHead(major: number, length: number): Buffer {
   head.writeUInt32BE(length, 1);
   return head;
 }
+// Minimal definite-length CBOR encoder, enough to build mDoc fixtures.
 export function encodeCbor(value: Cbor): Buffer {
   if (typeof value === "number")
     return value >= 0 ? cborHead(0, value) : cborHead(1, -1 - value);
@@ -117,6 +130,8 @@ export function encodeCbor(value: Cbor): Buffer {
   return Buffer.concat([cborHead(6, value.tag), encodeCbor(value.value)]);
 }
 
+// Encodes an mDoc as base64url CBOR with one namespace of issuer-signed
+// items. tagged wraps issuerAuth in the COSE_Sign1 tag (18).
 // Shaped like Certify 0.14's mso_mdoc response; the signature is not genuine.
 export function issueMdoc(
   claims: Record<string, string> = {

@@ -9,6 +9,10 @@ import { ErrorNotice, Loading, PageTitle } from "../components/ui";
 import { ExchangeList } from "../components/inspector/ExchangeList";
 import { PayloadView } from "../components/inspector/PayloadView";
 import { timestamp } from "../services/presentation";
+// The protocol inspector at /inspector. Pick a run, filter its captured
+// exchanges by title or endpoint, and read each request and response, with
+// the run's scenario and verification evidence above. Choosing a run here
+// also changes the run the workbench shows.
 export function InspectorPage() {
   const current = useCurrentRun();
   const runs = useRuns();
@@ -21,6 +25,8 @@ export function InspectorPage() {
         .toLowerCase()
         .includes(filter.toLowerCase()),
     ) || [];
+  // With no exchange picked, or the picked one filtered out, the first failed
+  // exchange is shown, or else the latest.
   const selected =
     events.find((event) => event.id === selectedEvent) ??
     events.find((event) => event.status >= 400) ??

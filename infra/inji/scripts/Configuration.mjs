@@ -9,7 +9,9 @@ export const environmentFile = resolve(root, ".env");
 export const generatedDirectory = resolve(root, "infra/inji/generated");
 // Present only while mobile mode publishes the stack on a phone-reachable origin.
 export const mobileStateFile = resolve(generatedDirectory, "mobile.json");
+// The workbench's browser origin; the mock wallet's OAuth callback is on it.
 export const playgroundOrigin = "http://localhost:5173";
+// JSON-LD presentation definition that DatabaseRenderer seeds into Verify.
 export const definitionId = "00000000-0000-4000-8000-000000000001";
 // Presentation definition per credential format; the SD-JWT definition is created by migration 005.
 export const definitionIds = {
@@ -17,6 +19,8 @@ export const definitionIds = {
   "vc+sd-jwt": "00000000-0000-4000-8000-000000000002",
 };
 
+// Accepts only a bare HTTPS origin: no credentials, path, query, fragment or
+// trailing slash. Returns the value so callers can validate inline.
 export function validateOrigin(name, value) {
   const url = new URL(value);
   if (
@@ -32,6 +36,8 @@ export function validateOrigin(name, value) {
   return value;
 }
 
+// Reads the mobile-mode state written by MobileMode.start, or returns null
+// when mobile mode is off. Its origin is validated before any renderer uses it.
 export async function readMobileState() {
   const text = await readFile(mobileStateFile, "utf8").catch(() => null);
   if (text === null) return null;
@@ -40,6 +46,9 @@ export async function readMobileState() {
   return state;
 }
 
+// Validated view of the root .env. While mobile mode is on, load() moves every
+// value derived from INJI_PUBLIC_ORIGIN to the mobile origin, so renderers and
+// scripts all see one consistent identity.
 export class Configuration {
   constructor(values, baseOrigin = values.INJI_PUBLIC_ORIGIN) {
     this.values = values;
@@ -47,6 +56,9 @@ export class Configuration {
     this.baseOrigin = baseOrigin;
   }
 
+  // Returns a copy in which each value equal to the current origin, or starting
+  // with it followed by "/", is moved to the new origin. Values on other hosts,
+  // including ones that merely share the origin's text, are left unchanged.
   withOrigin(origin) {
     validateOrigin("Public origin", origin);
     const current = this.origin;
@@ -57,10 +69,13 @@ export class Configuration {
     return new Configuration(values, this.baseOrigin);
   }
 
+  // True while the public origin differs from the .env origin.
   get mobile() {
     return this.origin !== this.baseOrigin;
   }
 
+  // Reads and validates .env and the required keystores, then applies the
+  // mobile-mode origin if one is active.
   static async load() {
     const values = parseEnv(await readFile(environmentFile, "utf8"));
     const required = [
@@ -85,6 +100,7 @@ export class Configuration {
     const missing = required.filter((key) => !values[key]?.trim());
     if (missing.length)
       throw new Error("Set these root .env values: " + missing.join(", "));
+    // Values are written into properties and env files, which are line-based.
     for (const [key, value] of Object.entries(values)) {
       if (/[\r\n]/.test(value))
         throw new Error(key + " must be a single line.");
@@ -118,6 +134,7 @@ export class Configuration {
     const port = Number(values.INJI_GATEWAY_PORT || 8091);
     if (!Number.isInteger(port) || port < 1 || port > 65535)
       throw new Error("Invalid INJI_GATEWAY_PORT.");
+    // 8000 and 5173 are the playground server and client ports.
     if (![8000, 5173].every((reserved) => port !== reserved))
       throw new Error("Gateway port conflicts with the playground.");
     for (const file of ["oidckeystore.p12", "verify-keystore.p12"]) {
@@ -135,17 +152,25 @@ export class Configuration {
   get origin() {
     return this.values.INJI_PUBLIC_ORIGIN;
   }
+  // did:web requires a port separator in the host to be percent-encoded.
   get issuerDid() {
     return "did:web:" + new URL(this.origin).host.replaceAll(":", "%3A");
   }
+  // Verify's DID, served at /v1/verify/did.json.
   get verifierDid() {
     return this.issuerDid + ":v1:verify";
   }
+  // The HTTP gateway on loopback, which a playground server run on the host
+  // uses to reach the Inji services.
   get localOrigin() {
     return "http://127.0.0.1:" + (this.values.INJI_GATEWAY_PORT || "8091");
   }
 }
 
+// Rewrites a Java .properties file: removes each entry whose key is replaced,
+// including its continuation lines, and appends the replacements at the end.
+// Comments and other entries are kept. Backslashes are doubled because
+// .properties treats them as escapes.
 export function properties(source, replacements) {
   const lines = source.split(/\r?\n/);
   const retained = [];

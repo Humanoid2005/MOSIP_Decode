@@ -8,10 +8,16 @@ interface Tagged {
 }
 type CborMap = Map<unknown, unknown>;
 
+// Reads CBOR data items from a buffer. Byte strings stay Buffers, maps keep
+// their non-string keys (COSE headers use integer labels) and tags are
+// returned as {tag, value}.
 class CborReader {
   private offset = 0;
   constructor(private readonly bytes: Buffer) {}
 
+  // Decodes the next data item by major type: 0 and 1 integers, 2 byte
+  // string, 3 text, 4 array, 5 map, 6 tag (the default branch), 7 simple
+  // values and floats.
   read(): unknown {
     const initial = this.byte();
     const major = initial >> 5;
@@ -44,6 +50,9 @@ class CborReader {
     return this.offset === this.bytes.length;
   }
 
+  // Reads the length or value encoded after the initial byte. Indefinite
+  // lengths are not supported, and 64-bit values beyond the safe integer range
+  // are rejected rather than rounded.
   private argument(info: number): number {
     if (info < 24) return info;
     if (info === 24) return this.byte();
@@ -58,6 +67,8 @@ class CborReader {
     throw new Error("Indefinite-length CBOR is not supported.");
   }
 
+  // Major type 7. Half-precision floats are expanded by hand because Buffer
+  // has no reader for them.
   private simple(info: number): unknown {
     if (info === 20) return false;
     if (info === 21) return true;
@@ -85,6 +96,7 @@ class CborReader {
     return this.take(1)[0]!;
   }
 
+  // Throws on truncated input, where subarray would return a short slice.
   private take(length: number): Buffer {
     if (this.offset + length > this.bytes.length)
       throw new Error("Truncated CBOR data.");
@@ -94,6 +106,7 @@ class CborReader {
   }
 }
 
+// Decodes exactly one CBOR item and rejects trailing bytes.
 export function decodeCbor(bytes: Buffer): unknown {
   const reader = new CborReader(bytes);
   const value = reader.read();
@@ -136,6 +149,8 @@ function view(value: unknown): unknown {
   return value;
 }
 
+// Names for COSE algorithm identifiers in the issuerAuth protected header. An
+// unlisted identifier is shown as its number.
 const coseAlgorithms: Record<number, string> = {
   [-7]: "ES256",
   [-35]: "ES384",
@@ -143,6 +158,9 @@ const coseAlgorithms: Record<number, string> = {
   [-8]: "EdDSA",
 };
 
+// Inspection view of an issued mDoc: issuer-signed elements by namespace, the
+// decoded Mobile Security Object, the issuerAuth signature algorithm and, when
+// present, the leaf certificate from its x5chain. Nothing here is verified.
 export interface MdocSummary {
   docType: string;
   algorithm: string;
@@ -189,6 +207,8 @@ export function decodeMdoc(credential: string): MdocSummary {
   const header = Buffer.isBuffer(protectedHeader)
     ? map(decodeCbor(protectedHeader), "Protected header")
     : new Map();
+  // x5chain (unprotected header label 33) holds one certificate or a chain
+  // with the leaf first.
   const chain = map(unprotectedHeader, "Unprotected header").get(33);
   const leaf = Array.isArray(chain) ? chain[0] : chain;
   let certificate: MdocSummary["certificate"];
@@ -210,6 +230,8 @@ export function decodeMdoc(credential: string): MdocSummary {
   };
 }
 
+// True when the value is a string that decodes as an mDoc. Used to recognise
+// an mso_mdoc credential in a /credential response.
 export function isMdoc(value: unknown): value is string {
   if (typeof value !== "string") return false;
   try {

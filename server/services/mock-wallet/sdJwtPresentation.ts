@@ -17,6 +17,8 @@ export function presentSdJwt(
       422,
       `The mock wallet supports sha-256 disclosures only, not ${String(algorithm)}.`,
     );
+  // sd_hash covers the issuer JWT and these disclosures, so the key binding
+  // cannot be moved to a different selection of claims.
   const presented = `${[issuerJwt, ...disclosures].join("~")}~`;
   const keyBinding = signEs256(
     { typ: "kb+jwt" },

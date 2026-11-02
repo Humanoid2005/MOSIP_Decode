@@ -3,6 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InjiWallet } from "../../models/mimoto";
 import { mimotoApi } from "../../services/mimoto-wallet/MimotoApi";
 import { ErrorNotice } from "../ui";
+// PIN form shown by MimotoWalletPanel while the embedded wallet is locked. It
+// unlocks the selected wallet (the first by default), or creates a wallet and
+// then unlocks it when the account has none. onUnlocked receives the wallet ID.
 export function WalletUnlock({
   wallets,
   onUnlocked,
@@ -15,6 +18,9 @@ export function WalletUnlock({
   const [confirmation, setConfirmation] = useState("");
   const walletId = selected || wallets[0]?.walletId;
   const queryClient = useQueryClient();
+  // The PIN fields are cleared before the request so the PIN is not kept in
+  // state. A failure refreshes the wallet list, which may have changed, for
+  // example when a wallet was created but could not be unlocked.
   const unlock = useMutation({
     mutationFn: async () => {
       const value = pin;

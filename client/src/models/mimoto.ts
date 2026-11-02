@@ -1,3 +1,6 @@
+// Response shapes used by the embedded Inji wallet. InjiWallet and
+// StoredCredential come from Mimoto's wallet API; WalletPresentation is the
+// playground's prepare response, shown to the user before they consent.
 export interface InjiWallet {
   walletId: string;
   walletName: string;

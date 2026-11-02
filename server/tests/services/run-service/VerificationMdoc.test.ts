@@ -8,7 +8,11 @@ import { VerificationService } from "../../../services/run-service/VerificationS
 import { ScenarioService } from "../../../services/scenario-service/ScenarioService.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { check, testRun } from "../../fixtures.js";
+// VerificationService for mDoc: the held credential goes to Verify's direct
+// credential check instead of a presentation (gap V4).
 
+// A VerificationService over a held Inji Mobile mDoc run. Without issuedMdoc
+// the run models a credential the bridge did not observe.
 function service(verifier: Partial<VerifierAdapter>, issuedMdoc?: string) {
   const dao = new InMemoryRunDao();
   dao.save(

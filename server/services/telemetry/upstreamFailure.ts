@@ -1,3 +1,8 @@
+// Extracts a short "code: message" reason from an upstream error body for error
+// messages and run failure details. It reads Inji's errorCode/errorMessage,
+// at the top level or nested under "error", and OAuth's error and
+// error_description. Returns undefined when the body has neither; the result
+// is capped at 600 characters.
 export function upstreamFailure(body: unknown): string | undefined {
   if (!body || typeof body !== "object" || Array.isArray(body)) return;
   const value = body as Record<string, unknown>;

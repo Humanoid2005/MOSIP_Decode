@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { Configuration } from "../Configuration.mjs";
 import { MobileDoctor } from "../mobile/MobileDoctor.mjs";
 
+// Covers MobileDoctor's checks against a stubbed public stack.
 const origin = "https://abc.trycloudflare.com";
 const config = new Configuration({
   INJI_PUBLIC_ORIGIN: origin,
@@ -37,6 +38,8 @@ function stack(overrides = {}) {
   };
 }
 
+// Stands in for the DIDs in Certify's database. The unresolvable fixture DID is
+// not did:web, so the signing-DID check ignores it.
 const signed = ["did:web:abc.trycloudflare.com", "did:playground:unresolvable-issuer"];
 const failures = async (request, dids = signed) =>
   (await new MobileDoctor(config, request, async () => dids).run()).filter(

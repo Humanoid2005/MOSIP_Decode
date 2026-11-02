@@ -3,6 +3,11 @@ import { ExternalLink, Send } from "lucide-react";
 import { api } from "../../api/PlaygroundApi";
 import type { TestRun } from "../../models/playground";
 import { ErrorNotice } from "../ui";
+// Run stage controls for the playground mock wallet, a non-Inji SD-JWT holder
+// that runs on the server. During issuance the user signs in as the credential
+// subject in a new tab, and the run advances on its own once the server's
+// callback stores the credential. During verification one click presents it
+// to Inji Verify.
 export function MockWalletPanel({ run }: { run: TestRun }) {
   const client = useQueryClient();
   const authorize = useMutation({

@@ -11,6 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+// Certify data provider for local development. Certify selects it when
+// mosip.certify.integration.data-provider-plugin is
+// PlaygroundSyntheticFarmerProvider, which AssetRenderer sets only when
+// INJI_LOCAL_DEVELOPMENT is true. Every Farmer credential format is served from
+// the same record.
 @Component
 @ConditionalOnProperty(name = "mosip.certify.integration.data-provider-plugin", havingValue = "PlaygroundSyntheticFarmerProvider")
 public final class SyntheticFarmerDataProvider implements DataProviderPlugin {
@@ -23,6 +28,9 @@ public final class SyntheticFarmerDataProvider implements DataProviderPlugin {
         factory = new SyntheticFarmerFactory();
     }
 
+    // Returns the subject's record, creating it on first issuance. The length
+    // limit matches the subject_id column. Registry errors are logged by type
+    // only and reported to Certify without detail.
     @Override
     public JSONObject fetchData(Map<String, Object> identity) throws DataProviderExchangeException {
         // Certify supplies the subject from its validated authorization token, never a form field.

@@ -5,6 +5,7 @@ import type { ProxyCaptureService } from "./ProxyCaptureService.js";
 import { upstreamFailure } from "../telemetry/upstreamFailure.js";
 import { AppError } from "../errors.js";
 import { parsePayload, safeEndpoint } from "../telemetry/sanitize.js";
+// Reads the OAuth "error" code from a parsed response body.
 function errorCode(body: unknown): string {
   return body && typeof body === "object" && !Array.isArray(body)
     ? String((body as Record<string, unknown>).error ?? "")
@@ -18,12 +19,19 @@ function retryable(body: unknown): boolean {
     typeof (body as Record<string, unknown>).c_nonce === "string"
   );
 }
+// The protocol bridge mounted at /bridge. The gateway sends wallet token,
+// credential and presentation exchanges here; each request is forwarded to the
+// configured Inji service and recorded on the run it belongs to, and the
+// upstream status and body are relayed unchanged.
 export class ProtocolProxy {
   constructor(
     private readonly environment: EnvironmentService,
     private readonly capture: ProxyCaptureService,
     private readonly scenarios: ScenarioService,
   ) {}
+  // Handles one bridged request: checks it against the allowlist, attributes
+  // it to the active run, applies any scenario mutation, runs the playground's
+  // presentation checks, forwards it and relays the response.
   async forward(req: Request, res: Response): Promise<void> {
     const match = /^\/(certify|verify|authorization)(\/[^?]*)?(\?.*)?$/.exec(
       req.url,
@@ -31,6 +39,10 @@ export class ProtocolProxy {
     if (!match) throw new AppError(404, "Unknown protocol bridge.");
     const role = match[1]!;
     const path = match[2] || "/";
+    // Only each service's protocol endpoints are reachable, so the bridge is
+    // not a general proxy into the stack. "..", backslashes and any
+    // percent-encoded dot, slash or backslash are refused to rule out path
+    // traversal.
     const permitted =
       role === "certify"
         ? /^\/(\.well-known\/openid-credential-issuer|credential|nonce|notification)$/
@@ -56,6 +68,7 @@ export class ProtocolProxy {
         "Configure this upstream service before using the protocol bridge.",
       );
     const url = `${target}${path}${match[3] || ""}`;
+    // An upstream configured as the bridge itself would forward in a loop.
     if (url.startsWith(`${env.publicBaseUrl}/bridge/`))
       throw new AppError(
         422,
@@ -69,6 +82,9 @@ export class ProtocolProxy {
       req.headers.authorization,
       request,
     );
+    // A negative scenario may replace a presentation body. It is parsed again
+    // so the recorded request and the playground's checks see what the
+    // upstream receives.
     body = await this.scenarios.bridgeBody(
       id,
       path,
@@ -77,6 +93,9 @@ export class ProtocolProxy {
     );
     request = parsePayload(body, req.headers["content-type"]);
     this.capture.observeSubmission(id, path, request);
+    // Only these request headers are forwarded; cookies and other browser
+    // headers stop here. An uncompressed response lets the recorded and relayed
+    // bytes be the upstream body as sent.
     const headers: Record<string, string> = { "accept-encoding": "identity" };
     for (const name of ["content-type", "accept", "authorization"])
       if (typeof req.headers[name] === "string")
@@ -84,6 +103,9 @@ export class ProtocolProxy {
     const started = Date.now();
     let upstream: globalThis.Response;
     let bytes: Buffer;
+    // Redirects are relayed to the wallet rather than followed, and the
+    // upstream has 20 seconds to answer. A failed or oversized response is
+    // recorded on the run and answered with 504 on timeout, 502 otherwise.
     try {
       upstream = await fetch(url, {
         method: req.method,
@@ -130,6 +152,8 @@ export class ProtocolProxy {
       });
       this.judge(id, role, path, upstream.status, responseBody);
     });
+    // Relays only the response headers a wallet needs to continue the protocol:
+    // content type, redirect target, authentication challenge and retry delay.
     for (const name of [
       "content-type",
       "location",
@@ -143,6 +167,8 @@ export class ProtocolProxy {
     res.status(upstream.status).end(bytes);
   }
 
+  // Reads the upstream body, cancelling once it passes 5 MB so a large
+  // response cannot exhaust memory.
   private async read(upstream: globalThis.Response): Promise<Buffer> {
     const chunks: Uint8Array[] = [];
     let size = 0;

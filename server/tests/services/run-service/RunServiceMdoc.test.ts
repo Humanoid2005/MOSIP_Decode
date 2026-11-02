@@ -7,7 +7,10 @@ import { OfferService } from "../../../services/run-service/OfferService.js";
 import { RunService } from "../../../services/run-service/RunService.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { testRun } from "../../fixtures.js";
+// RunService.start() for mDoc: offered to Inji Mobile, refused for Inji Web
+// and the mock wallet.
 
+// A RunService whose issuer advertises only the mDoc configuration.
 function service() {
   const dao = new InMemoryRunDao();
   const issuer: IssuerAdapter = {

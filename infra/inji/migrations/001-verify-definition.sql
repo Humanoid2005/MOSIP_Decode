@@ -1,3 +1,8 @@
+-- For inji_verify databases created before the seed included this fix.
+-- Converts input_descriptors to text, the column type the pinned Verify
+-- service expects, and sets the farmer definition's ldp_vc format and type
+-- filter. No script runs this file. Apply it before 003, which removes the
+-- anchors from the pattern set here.
 BEGIN;
 ALTER TABLE verify.presentation_definition
     ALTER COLUMN input_descriptors TYPE text USING input_descriptors::text;

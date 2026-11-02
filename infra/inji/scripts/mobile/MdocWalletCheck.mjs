@@ -16,6 +16,7 @@ export function walletMdocChecks(credential, now = Date.now()) {
   const [protectedHeader, unprotectedHeader, payload, signature] = issuerAuth;
   const mso = embedded(payload);
 
+  // validFrom may be up to a minute ahead of this computer's clock.
   const validity = mso.get("validityInfo");
   const from = Date.parse(dateText(validity?.get("validFrom")));
   const until = Date.parse(dateText(validity?.get("validUntil")));
@@ -28,6 +29,7 @@ export function walletMdocChecks(credential, now = Date.now()) {
   const values = [...unprotectedHeader.values()];
   const entry = values.length > 1 || Array.isArray(values[0]) ? values[0]?.[1] : values[0];
   if (!Buffer.isBuffer(entry)) throw new Error("The issuerAuth certificate chain is empty.");
+  // issuing_country must equal the country in the certificate subject.
   const certificate = new X509Certificate(entry);
   const country = /(?:^|\n|, ?)C=([^,\n]+)/.exec(certificate.subject)?.[1];
   const issuingCountry = [...nameSpaces.values()]
@@ -38,12 +40,15 @@ export function walletMdocChecks(credential, now = Date.now()) {
   if (!country || issuingCountry !== country)
     throw new Error(`issuing_country (${issuingCountry}) does not match the certificate country (${country}).`);
 
+  // COSE Sig_structure for Signature1: protected header, empty external AAD
+  // and the payload.
   const toBeSigned = Buffer.concat([
     head(4, 4), text("Signature1"), bytes(protectedHeader), bytes(Buffer.alloc(0)), bytes(payload),
   ]);
   if (!verify("sha256", toBeSigned, { key: certificate.publicKey, dsaEncoding: "ieee-p1363" }, signature))
     throw new Error("The COSE signature does not verify with the certificate key.");
 
+  // Each element is hashed as embedded, tag 24 included (IssuerSignedItemBytes).
   const digests = mso.get("valueDigests");
   const byNamespace = digests.get("nameSpaces") ?? digests;
   for (const [namespace, items] of nameSpaces)
@@ -58,15 +63,18 @@ export function walletMdocChecks(credential, now = Date.now()) {
   return { docType: mso.get("docType"), certificate: certificate.subject.replaceAll("\n", ", ") };
 }
 
+// MSO dates are text, optionally wrapped in tag 0.
 function dateText(value) {
   return typeof value === "string" ? value : value?.tag === 0 ? value.value : "";
 }
 
+// Decodes tag-24 embedded CBOR (bstr .cbor), unwrapping nested tags as well.
 function embedded(value) {
   const decoded = decode(value?.tag === 24 ? value.value : value);
   return decoded?.tag === 24 ? embedded(decoded) : decoded;
 }
 
+// Minimal CBOR encoders for the Sig_structure.
 const head = (major, length) => {
   if (length < 24) return Buffer.from([(major << 5) | length]);
   if (length < 256) return Buffer.from([(major << 5) | 24, length]);
@@ -80,6 +88,7 @@ const bytes = (value) => Buffer.concat([head(2, value.length), value]);
 const text = (value) => Buffer.concat([head(3, Buffer.byteLength(value)), Buffer.from(value)]);
 
 // Definite-length CBOR only, as Certify encodes it.
+// Tagged values are returned as { tag, value }.
 function decode(buffer) {
   let offset = 0;
   const take = (length) => {

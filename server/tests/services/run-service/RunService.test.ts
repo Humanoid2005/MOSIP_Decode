@@ -7,7 +7,10 @@ import { OfferService } from "../../../services/run-service/OfferService.js";
 import { RunService } from "../../../services/run-service/RunService.js";
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { testRun } from "../../fixtures.js";
+// RunService.start() for external wallets: the generated Inji Mobile offer,
+// its HTTPS requirement, and Inji Web starting without an offer.
 
+// A RunService whose issuer advertises one JSON-LD configuration.
 function service(issuerUrl = "https://issuer.test/v1/certify/issuance") {
   const dao = new InMemoryRunDao();
   const environment = {

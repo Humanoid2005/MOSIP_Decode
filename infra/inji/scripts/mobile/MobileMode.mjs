@@ -29,6 +29,7 @@ const originServices = [
   "inji-web",
   "playground-server",
 ];
+// Scopes whose audience follows the origin and that Inji Mobile may request.
 const credentialScopes = [
   "mock_identity_vc_ldp",
   "mock_identity_vc_sd_jwt",
@@ -41,11 +42,16 @@ const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 // starts from it, so rerunning start or stop after a failure finishes the move.
 const appliedFile = resolve(generatedDirectory, "mobile-applied.json");
 
+// Moves the running stack between its .env origin and a phone-reachable public
+// origin for Inji Mobile; see "Inji Mobile mode" in infra/inji/README.md.
 export class MobileMode {
   constructor(log = console.log) {
     this.log = log;
   }
 
+  // Publishes the stack on requestedOrigin, or on a Cloudflare quick tunnel
+  // when none is given, records it in mobile.json, moves the stack's identity
+  // there and returns the readiness checks.
   async start(requestedOrigin) {
     if (requestedOrigin) validateOrigin("--origin", requestedOrigin);
     this.requireStack();
@@ -71,6 +77,8 @@ export class MobileMode {
     return { origin, checks: await this.doctor() };
   }
 
+  // Removing mobile.json makes Configuration.load() return the .env origin
+  // again. The tunnel goes last, once no service publishes its URL.
   async stop() {
     this.requireStack();
     await rm(mobileStateFile, { force: true });
@@ -78,6 +86,9 @@ export class MobileMode {
     this.compose("rm", "-sf", "tunnel");
   }
 
+  // An applied origin that differs from the configured one means a start or
+  // stop did not finish. Otherwise reports whether the mobile origin answers
+  // and, if it does, the readiness checks.
   async status() {
     const state = await readMobileState();
     const config = await Configuration.load();
@@ -88,11 +99,13 @@ export class MobileMode {
     return { on: true, ...state, reachable, checks: reachable ? await this.doctor() : [] };
   }
 
+  // Runs MobileDoctor against the configuration as it is now.
   async doctor() {
     const config = await Configuration.load();
     return new MobileDoctor(config, fetch, () => this.signingDids()).run();
   }
 
+  // Falls back to the .env origin when no move has been recorded.
   appliedOrigin(config) {
     return readFile(appliedFile, "utf8").then(
       (text) => JSON.parse(text).origin,
@@ -100,6 +113,11 @@ export class MobileMode {
     );
   }
 
+  // Moves everything that carries the public origin to the one
+  // Configuration.load() now returns: rendered files, Certify's stored DIDs and
+  // template, then the realm. The applied origin is recorded only after both
+  // updates succeed, and the services are recreated last so they start with
+  // the new configuration.
   async switchIdentity() {
     const next = await Configuration.load();
     const from = await this.appliedOrigin(next);
@@ -132,6 +150,7 @@ export class MobileMode {
       );
   }
 
+  // The DIDs Certify signs with, read from its credential configurations.
   signingDids() {
     return this.compose(
       "exec", "-T", "database", "psql", "-U", "postgres", "-d", "inji_certify", "-At",
@@ -190,6 +209,9 @@ export class MobileMode {
     }
   }
 
+  // Polls the tunnel's log for about two minutes until it shows the URL and a
+  // registered connection. A failed QUIC dial means UDP is blocked, so the
+  // error suggests the http2 transport.
   async waitForTunnel() {
     let logs = "";
     for (let attempt = 0; attempt < 60; attempt++) {
@@ -215,6 +237,8 @@ export class MobileMode {
     throw new Error(`${origin} is not reachable from this computer.`);
   }
 
+  // Fetches a static file that the public listener serves itself, so the
+  // result does not depend on the Java services.
   async reachable(origin) {
     const response = await fetch(origin + "/config/farmer.json", {
       signal: AbortSignal.timeout(10000),
@@ -226,6 +250,9 @@ export class MobileMode {
     return this.composeWithInput(undefined, ...args);
   }
 
+  // Names both Compose files and the mobile profile explicitly, so the tunnel
+  // service is available whatever COMPOSE_FILE says. input goes to stdin; the
+  // large buffer holds full service logs.
   composeWithInput(input, ...args) {
     return execFileSync(
       "docker",

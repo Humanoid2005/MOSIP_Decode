@@ -9,7 +9,11 @@ import {
 import type { TestRun } from "../../models/dtos.js";
 import type { VerificationCheck } from "../../models/verification.js";
 import { check, testRun } from "../fixtures.js";
+// Scenario and normal-flow scoring, scenario availability and the QR size
+// policy.
 
+// The playground's request-binding checks plus its SD-JWT holder binding
+// checks.
 const bindings = [
   "state",
   "definition",
@@ -27,6 +31,8 @@ const bindings = [
   "binding-time",
 ];
 
+// A finished run with full issuance and holder evidence and the given
+// verifier result.
 function completed(
   overrides: Partial<TestRun>,
   checks: VerificationCheck[],
@@ -43,6 +49,9 @@ function completed(
   });
 }
 
+// A complete, passing check set; overrides change single statuses. Credential
+// status defaults to NOT_APPLICABLE, as Verify reports it for a credential
+// with no status entry.
 function checks(overrides: Record<string, VerificationCheck["status"]> = {}) {
   return [
     ...["issuer-signature", "expiry", "holder-proof"].map((id) =>
@@ -190,5 +199,6 @@ test("scenario availability follows wallet and fixture support", () => {
 
 test("QR policy measures UTF-8 bytes", () => {
   assert.deepEqual(qrHandoff("a".repeat(1999)), { bytes: 1999, fitsQr: true });
+  // 1000 two-byte characters reach the 2000-byte limit.
   assert.equal(qrHandoff("é".repeat(1000)).fitsQr, false);
 });

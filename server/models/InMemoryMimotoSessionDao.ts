@@ -1,4 +1,6 @@
 import type { MimotoSession, MimotoSessionDao } from "./MimotoSession.js";
+// Embedded wallet sessions by run ID, held in memory. Beyond 100 sessions the
+// earliest created is dropped.
 export class InMemoryMimotoSessionDao implements MimotoSessionDao {
   private readonly sessions = new Map<string, MimotoSession>();
   get(runId: string) {

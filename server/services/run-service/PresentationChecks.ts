@@ -4,6 +4,10 @@ import type { VerificationCheck } from "../../models/verification.js";
 import { object } from "../errors.js";
 import { decodeJwt } from "../mock-wallet/jws.js";
 import { credentialFingerprint } from "./credentialFingerprint.js";
+// The playground's own checks on a presentation submission, made as the
+// bridge forwards it to Inji Verify, after any scenario mutation. They are
+// reported next to Verify's checks, which missed several mismatches (gaps V1,
+// V2). The returned fingerprints identify the submitted credential.
 
 // Deliberately limited to the two presentation encodings and constraint shapes
 // exercised by this playground. Unsupported shapes are never treated as passes.
@@ -16,6 +20,8 @@ export function presentationChecks(
 } {
   const checks: VerificationCheck[] = [];
   const fingerprints: string[] = [];
+  // Records one check: true passes, false fails and undefined means the check
+  // could not be made (NOT_CHECKED).
   const add = (
     id: string,
     label: string,
@@ -35,6 +41,8 @@ export function presentationChecks(
     if (!expected)
       throw new Error("No correlated presentation request was recorded.");
     const request = object(body);
+    // The verifier request uses its request ID as state, so this binds the
+    // submission to this run's request.
     add(
       "state",
       "Submission state matches this request",
@@ -61,6 +69,9 @@ export function presentationChecks(
     let actualFormat: string;
     let algorithm: unknown;
     let isSdJwt = false;
+    // SD-JWT: the issuer JWT and disclosures, then the Key Binding JWT after
+    // the last "~". The format is taken from the run's configuration, so
+    // issued-format only separates SD-JWT from JSON-LD here.
     if (typeof token === "string" && !token.trim().startsWith("{")) {
       isSdJwt = true;
       actualFormat = run.configuration.format;
@@ -91,6 +102,8 @@ export function presentationChecks(
         binding.payload.sd_hash ===
           createHash("sha256").update(sdJwt, "ascii").digest("base64url"),
       );
+      // The Key Binding JWT must be created during this run, allowing 60 s of
+      // clock skew.
       const iat = binding.payload.iat;
       add(
         "binding-time",
@@ -99,6 +112,9 @@ export function presentationChecks(
           iat >= Math.floor(Date.parse(run.createdAt) / 1000) - 60 &&
           iat <= Math.floor(Date.now() / 1000) + 60,
       );
+      // Verifies the Key Binding JWT against the holder key the issuer bound
+      // into the credential: cnf.jwk, or a did:jwk in cnf.kid. Only ES256
+      // with a P-256 public key is supported; anything else fails the check.
       let valid = false;
       try {
         const cnf = object(credential.cnf);
@@ -152,6 +168,10 @@ export function presentationChecks(
         "Independent ES256 key-binding check; the issuer signature is checked separately by Inji Verify.",
       );
     } else {
+      // JSON-LD: a presentation with exactly one credential. Its proof must
+      // carry the request nonce as challenge and the verifier client ID as
+      // domain, and be an authentication proof by the presentation's holder.
+      // Verify checks the proof signature itself (holder-proof).
       actualFormat = "ldp_vc";
       const vp = object(typeof token === "string" ? JSON.parse(token) : token);
       const credentials = vp.verifiableCredential;
@@ -207,6 +227,8 @@ export function presentationChecks(
       mapping.id === descriptor.id && (!nested || nested.id === descriptor.id),
       `Requested ${String(descriptor.id)}; received ${String(mapping.id)}.`,
     );
+    // An SD-JWT is mapped as the token itself. A JSON-LD presentation is
+    // mapped at "$" with the credential nested at $.verifiableCredential[0].
     add(
       "descriptor-path",
       "Descriptor path and declared format",
@@ -218,6 +240,10 @@ export function presentationChecks(
             nested.format === "ldp_vc" &&
             !nested.path_nested,
     );
+    // A format restriction may sit on the definition and on the descriptor.
+    // Each one present must allow the actual format and list the credential's
+    // algorithm or proof suite. A restriction with other rule keys cannot be
+    // evaluated and leaves the proof check NOT_CHECKED.
     const formats = [expected.definition.format, descriptor.format].filter(
       (value) => value !== undefined,
     );
@@ -247,6 +273,10 @@ export function presentationChecks(
       proofValid,
       formats.length ? undefined : "No proof restriction in the request.",
     );
+    // Only field constraints on $.type[*] (JSON-LD) or $.vct (SD-JWT) with a
+    // string filter by pattern or const are evaluated; a pattern is used as a
+    // regular expression. Any other shape, or submission_requirements, leaves
+    // the claims check NOT_CHECKED.
     const constraints = descriptor.constraints
       ? object(descriptor.constraints)
       : {};
@@ -301,6 +331,8 @@ export function presentationChecks(
         : undefined,
     );
   } catch (error) {
+    // A submission that cannot be decoded or has an unsupported shape adds a
+    // NOT_CHECKED entry, so the run cannot pass.
     add(
       "presentation-evidence",
       "Presentation evidence",

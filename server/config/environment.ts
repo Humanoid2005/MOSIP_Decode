@@ -2,6 +2,10 @@ import "dotenv/config";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import type { Environment } from "../models/dtos.js";
+// Startup configuration. Inji endpoints come from the process environment
+// first, then from the playground.env that prepare.mjs renders. That path is
+// resolved from the parent of the working directory, which is the repository
+// root when the server is started from server/.
 const dockerEnvironment =
   config({
     path: resolve("..", "infra/inji/generated/playground.env"),
@@ -10,6 +14,8 @@ const dockerEnvironment =
   }).parsed ?? {};
 const endpoint = (name: string) =>
   process.env[name]?.trim() || dockerEnvironment[name] || "";
+// Parses INJI_PRESENTATION_DEFINITION_IDS ("ldp_vc=<id>,vc+sd-jwt=<id>") into
+// a format-to-ID map, skipping malformed entries.
 function definitionIds(value: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const entry of value.split(",")) {
@@ -20,6 +26,8 @@ function definitionIds(value: string): Record<string, string> {
   }
   return result;
 }
+// clientOrigin is the workbench origin. The API's origin check allows it, and
+// the mock wallet's callback URL is built on it.
 export const settings = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 8000),
@@ -28,6 +36,7 @@ export const settings = {
   mockWalletClientId:
     process.env.MOCK_WALLET_CLIENT_ID || "playground-mock-wallet",
 };
+// The Inji environment, validated by EnvironmentService at startup.
 export const initialEnvironment: Environment = {
   certifyUrl: endpoint("INJI_CERTIFY_URL"),
   issuerUrl: endpoint("INJI_ISSUER_URL"),

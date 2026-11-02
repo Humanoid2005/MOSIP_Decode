@@ -4,6 +4,12 @@ import {
 } from "../../../../server/models/scenarios";
 import type { TestRun } from "../../models/playground";
 
+// Evidence panel for a negative-scenario run, on the workbench and in the
+// inspector. A scenario passes when the stack rejects the change for the
+// expected reason, fails when the verifier accepts it, and is inconclusive
+// when the evidence cannot tie the result to the change. Also shows the
+// failure stage, the independent issuer-signature controls and each change
+// the scenario applied.
 export function ScenarioResult({ run }: { run: TestRun }) {
   if (run.scenario === "NONE") return null;
   const definition = scenarioDefinition(run.scenario);

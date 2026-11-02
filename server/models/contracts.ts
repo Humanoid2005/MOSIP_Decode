@@ -5,12 +5,18 @@ import type {
   RunSummary,
   TestRun,
 } from "./dtos.js";
+// Contracts between the workflow services and their storage, transport and
+// Inji adapters, so each can be replaced without touching the workflow.
+// Run storage. Reads return copies: a caller changes its copy and save()s it.
+// active() returns the newest run in ISSUING, HELD or VERIFYING.
 export interface RunDao {
   summaries(): RunSummary[];
   active(): TestRun | undefined;
   get(id: string): TestRun;
   save(run: TestRun): void;
 }
+// Plain upstream HTTP. body is the parsed JSON response, or the text when it
+// is not JSON. Non-2xx responses are returned rather than thrown.
 export interface HttpTransport {
   send(
     url: string,
@@ -22,6 +28,9 @@ export interface HttpTransport {
     headers?: Headers;
   }>;
 }
+// Reads the issuer's OpenID4VCI metadata and lists the credential
+// configurations the playground can run. With a runId the metadata request is
+// recorded on that run.
 export interface IssuerAdapter {
   discover(
     environment: Environment,
@@ -31,6 +40,8 @@ export interface IssuerAdapter {
     configurations: CredentialConfiguration[];
   }>;
 }
+// The verifier side of a run: create the OpenID4VP request, poll its status,
+// then collect the verdict together with the verifier's per-check evidence.
 export interface VerifierAdapter {
   create(
     run: TestRun,

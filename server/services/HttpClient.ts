@@ -1,5 +1,11 @@
 import type { HttpTransport } from "../models/contracts.js";
 import { AppError } from "./errors.js";
+// Default HttpTransport for the server's own calls to Inji services; the
+// bridge forwards wallet traffic separately. Redirects are refused rather than
+// followed, each call times out after 15 seconds and the body is capped at
+// 5 MB (502). JSON bodies are parsed and anything else is returned as text.
+// Status codes are left to the caller; a network, TLS, timeout or redirect
+// failure becomes 503.
 export class HttpClient implements HttpTransport {
   async send(url: string, options: RequestInit = {}) {
     const started = Date.now();

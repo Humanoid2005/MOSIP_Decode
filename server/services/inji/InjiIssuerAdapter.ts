@@ -5,8 +5,15 @@ import type {
 } from "../../models/dtos.js";
 import type { ObservedHttpClient } from "../telemetry/ObservedHttpClient.js";
 import { AppError, object } from "../errors.js";
+// Reads Inji Certify's OpenID4VCI issuer metadata to list the credential
+// configurations a run can be started with.
 export class InjiIssuerAdapter implements IssuerAdapter {
   constructor(private readonly http: ObservedHttpClient) {}
+  // Fetches metadata from Certify's upstream URL, which differs from the
+  // public issuer identifier when the bridge is used; credential_issuer must
+  // still equal the configured identifier exactly. Only formats the playground
+  // can run (JSON-LD, SD-JWT and mDoc) are listed, and proofTypes holds the
+  // issuer's credential signing algorithms.
   async discover(env: Environment, runId?: string) {
     if (!env.certifyUrl || !env.issuerUrl)
       throw new AppError(

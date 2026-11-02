@@ -13,7 +13,14 @@ import type { OfferService } from "./OfferService.js";
 import { AppError, object, requiredString } from "../errors.js";
 import type { TestRun } from "../../models/dtos.js";
 import { mockWalletFormats } from "../mock-wallet/MockWalletService.js";
+// Creates runs and carries them through issuance, from ISSUING to HELD. It
+// checks that the wallet, credential configuration and scenario can work
+// together, prepares the credential offer where the wallet needs one and
+// records holder receipt. Only one run may be active at a time, because bridge
+// traffic carries no run identifier and is attributed to the active run.
 export class RunService {
+  // True for the duration of start(). The new run is saved only after issuer
+  // discovery, so this is what refuses a concurrent start in the meantime.
   private starting = false;
   constructor(
     private readonly dao: RunDao,
@@ -28,6 +35,13 @@ export class RunService {
   isBusy(): boolean {
     return this.starting || Boolean(this.active());
   }
+  // Validates the requested wallet, scenario and configuration and creates a
+  // run in ISSUING. Issuer metadata is fetched twice: first to validate the
+  // selection before anything is stored, then under the new run's ID so the
+  // fetch appears in its protocol log. Inji Mobile receives an
+  // authorization-code offer built from issuer metadata; a pasted offer is
+  // validated and re-encoded instead. A failure after the run is saved fails
+  // the run with its reason instead of failing the HTTP request.
   async start(value: unknown): Promise<TestRun> {
     if (this.isBusy())
       throw new AppError(
@@ -60,6 +74,8 @@ export class RunService {
         !["COMPLETED", "FAILED", "CANCELLED"].includes(parent.phase)
       )
         throw new AppError(409, "Finish the original run before replaying it.");
+      // The fixture scenarios always use their own separately signed
+      // configurations, whatever configuration was selected.
       const configuration = discovery.configurations.find(
         (config) =>
           config.id ===
@@ -86,6 +102,8 @@ export class RunService {
         ),
       );
       if (unavailable) throw new AppError(422, unavailable);
+      // The fixture configurations issue deliberately faulty credentials, so
+      // only their own scenario may use them.
       if (
         configuration.id === unsupportedDidConfigurationId &&
         scenario.id !== "UNSUPPORTED_DID"
@@ -115,16 +133,20 @@ export class RunService {
         (!environment.embeddedWalletUrl || !environment.mimotoUrl)
       )
         throw new AppError(409, "The embedded Inji wallet is not configured.");
+      // Mimoto has no mso_mdoc format handler (gap M12).
       const mdocUnsupported = mdocWalletUnsupported(
         input.wallet as TestRun["wallet"],
         configuration.format,
       );
       if (mdocUnsupported) throw new AppError(422, mdocUnsupported);
+      // Mimoto 0.21 cannot present SD-JWT over OpenID4VP (gap M1).
       if (input.wallet === "INJI_MIMOTO" && configuration.format !== "ldp_vc")
         throw new AppError(
           422,
           "This Mimoto release supports JSON-LD presentations only. Use the mock wallet for SD-JWT.",
         );
+      // These wallets are driven from the workbench with the authorization
+      // code flow, so a pasted offer would never be redeemed.
       if (
         ["INJI_MIMOTO", "MOCK_WALLET"].includes(String(input.wallet)) &&
         typeof input.offer === "string" &&
@@ -157,10 +179,13 @@ export class RunService {
       try {
         await this.issuer.discover(environment, run.id);
         const supplied = typeof input.offer === "string" && input.offer.trim();
+        // Inji Mobile needs an offer to scan; other wallets get one only when
+        // the user pasted it.
         if (supplied || run.wallet === "INJI_MOBILE") {
           const resolved = supplied
             ? await this.offers.resolve(input.offer as string, run)
             : this.offers.authorizationCodeOffer(run);
+          // The run may have been cancelled while the offer was resolved.
           const latest = this.dao.get(run.id);
           if (latest.phase !== "ISSUING") return latest;
           latest.offerUri = resolved.uri;
@@ -179,6 +204,8 @@ export class RunService {
           });
         }
       } catch (error) {
+        // Fails the run unless it was cancelled meanwhile. Unexpected errors
+        // are logged and shown to the user only as a generic message.
         const latest = this.dao.get(run.id);
         if (latest.phase !== "ISSUING") return latest;
         latest.phase = "FAILED";
@@ -196,6 +223,11 @@ export class RunService {
       this.starting = false;
     }
   }
+  // Records that the holder has the credential and moves the run to HELD. The
+  // default receipt is the user's own confirmation, used for Inji Mobile and
+  // Inji Web. The embedded Inji wallet and the mock wallet must confirm
+  // through their own storage response, so a user click cannot stand in for
+  // them. The offer is cleared once the credential is held.
   confirmHolder(
     id: string,
     receipt = {
@@ -235,6 +267,10 @@ export class RunService {
     });
     return this.dao.get(id);
   }
+  // Stops an active run locally. Nothing is revoked upstream: an offer or a
+  // verifier request stays valid at Inji, but the run is no longer active, so
+  // the coordinator stops polling it and bridge traffic is no longer
+  // attributed to it.
   cancel(id: string): TestRun {
     const run = this.dao.get(requiredString(id, "runId"));
     if (!["ISSUING", "HELD", "VERIFYING"].includes(run.phase))

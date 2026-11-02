@@ -5,8 +5,17 @@ import type { TestRun } from "../../models/dtos.js";
 import type { TelemetryService } from "../telemetry/TelemetryService.js";
 import { AppError, UpstreamError } from "../errors.js";
 import { credentialFingerprint } from "./credentialFingerprint.js";
+// Verifier side of a run. Creates the Inji Verify presentation request, polls
+// its status and collects the result, reporting the playground's own checks
+// on the bridged submission next to Verify's. Upstream outages leave the run
+// retryable; a verifier rejection or an unusable verifier response fails it.
 export class VerificationService {
+  // Runs with a verifier call in flight. begin() refuses an overlapping call
+  // and refresh() skips one.
   private readonly busy = new Set<string>();
+  // Time of the last status poll per run. Polls from the coordinator and the
+  // API share it, so Verify is polled at most once every 2 s per run. Bounded
+  // to 100 entries.
   private readonly lastPoll = new Map<string, number>();
   constructor(
     private readonly dao: RunDao,
@@ -14,6 +23,12 @@ export class VerificationService {
     private readonly telemetry: TelemetryService,
     private readonly scenarios: ScenarioService,
   ) {}
+  // Moves a held run to VERIFYING by creating a presentation request at Inji
+  // Verify; an mDoc run is checked directly instead. The phase is checked
+  // again afterwards because the run may be cancelled meanwhile. An
+  // unreachable service, 5xx or 429 is recorded on the run and rethrown so the
+  // user can retry; any other AppError fails the run at the request stage.
+  // Other errors are playground defects and leave the run unchanged.
   async begin(id: string) {
     const run = this.dao.get(id);
     if (run.phase !== "HELD" || this.busy.has(id))
@@ -71,6 +86,8 @@ export class VerificationService {
     try {
       result = await this.verifier.checkCredential(run, run.issuedMdoc);
     } catch (error) {
+      // An HTTP 4xx other than 429 is Verify rejecting the credential. Other
+      // errors go to begin(), which treats them as outages or request failures.
       if (
         error instanceof UpstreamError &&
         error.upstreamStatus >= 400 &&
@@ -108,6 +125,8 @@ export class VerificationService {
     this.telemetry.notify(run.id);
     return latest;
   }
+  // Shows a transient failure on the run without changing its phase, so a
+  // later attempt can still complete it.
   private recordError(id: string, error: Error) {
     const latest = this.dao.get(id);
     if (!["HELD", "VERIFYING"].includes(latest.phase)) return;
@@ -116,6 +135,11 @@ export class VerificationService {
     this.dao.save(latest);
     this.telemetry.notify(id);
   }
+  // Polls the run's presentation request once. ACTIVE means the wallet has
+  // not submitted yet. Any status other than VP_SUBMITTED, such as EXPIRED,
+  // fails the run at the request stage. On VP_SUBMITTED the v2 result is
+  // fetched and completes the run. Polls are throttled per run and skipped
+  // while another verifier call for the run is in flight.
   async refresh(id: string) {
     const run = this.dao.get(id);
     if (
@@ -132,6 +156,7 @@ export class VerificationService {
       const status = await this.verifier.status(run);
       if (status === "ACTIVE") {
         const latest = this.dao.get(id);
+        // Clears an error left by an earlier failed poll.
         if (latest.phase === "VERIFYING" && latest.error) {
           latest.error = undefined;
           latest.updatedAt = new Date().toISOString();
@@ -166,6 +191,9 @@ export class VerificationService {
       if (latest.phase !== "VERIFYING") return latest;
       latest.error = undefined;
       latest.result = result.payload;
+      // Verify's checks are followed by the playground's checks, which the
+      // bridge recorded when it forwarded the submission. If the submission
+      // was not observed, a NOT_CHECKED entry keeps the run from passing.
       latest.verification = {
         ...result.verification,
         checks: [
@@ -193,6 +221,8 @@ export class VerificationService {
       latest.verdict = result.verdict;
       latest.phase = "COMPLETED";
       latest.presentationUri = undefined;
+      // The verified credential must be one the bridge saw issued in this run,
+      // and, for result correlation, the one the bridge saw submitted.
       latest.credentialMatched =
         result.credentials.length === 1 &&
         result.credentials.every((credential) =>
@@ -221,6 +251,8 @@ export class VerificationService {
       this.telemetry.notify(id);
       return latest;
     } catch (error) {
+      // Outages are retryable as in begin(). Any other AppError, such as an
+      // upstream 4xx or an inconsistent result, fails the run at verification.
       if (
         error instanceof UpstreamError &&
         (error.upstreamStatus >= 500 || error.upstreamStatus === 429)

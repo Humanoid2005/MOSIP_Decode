@@ -9,12 +9,20 @@ import {
   WalletCallbackPage,
   WalletLoginReturn,
 } from "./pages/WalletCallbackPage";
+// Retries are off so failures surface at once and run actions, which change
+// server state, are never repeated. Run data stays current through polling
+// and WebSocket invalidation, so refetching on window focus is not needed.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false, refetchOnWindowFocus: false },
     mutations: { retry: false },
   },
 });
+// Root component. The workbench, protocol inspector and run history share the
+// app shell; wallet-callback and login-return are where Keycloak and Mimoto
+// send the browser back during embedded wallet issuance and sign-in. Behind
+// the gateway the app is served under /playground, so the router uses that
+// prefix as its base there.
 export default function App() {
   return (
     <ErrorBoundary>

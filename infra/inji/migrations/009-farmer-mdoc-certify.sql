@@ -1,3 +1,5 @@
+-- Runs in inji_certify in local mode, in the fresh seed and on every
+-- upgrade.mjs run, so it must stay rerunnable.
 BEGIN;
 -- ISO/IEC 18013-5 mDoc variant of the farmer credential. Certify's own mso_mdoc support builds the
 -- namespace, salts and digests the elements and COSE-signs the MSO with the existing ES256 (P-256) key.

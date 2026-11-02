@@ -7,6 +7,11 @@ import { formatName, walletName } from "../../services/presentation";
 import { SequenceDiagram } from "./SequenceDiagram";
 import { PayloadView } from "./PayloadView";
 
+// Button in the workbench's step bar that opens the current run's protocol
+// sequence in a dialog. The diagram stays live while the run is in progress.
+// Selecting an arrow shows that event's payload below the diagram, and the
+// selection is cleared whenever the dialog opens or closes. Replay animation
+// remounts the diagram so it draws in again from the top.
 export function SequenceDialog({ run }: { run?: TestRun }) {
   const [selectedId, setSelected] = useState("");
   const [replay, setReplay] = useState(0);

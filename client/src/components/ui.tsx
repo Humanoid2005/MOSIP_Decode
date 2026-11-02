@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+// Alert showing an error's message; renders nothing when there is no error.
 export function ErrorNotice({ error }: { error: unknown }) {
   return error ? (
     <p
@@ -9,6 +10,8 @@ export function ErrorNotice({ error }: { error: unknown }) {
     </p>
   ) : null;
 }
+// Page heading with an optional eyebrow label above it and an introduction
+// below it.
 export function PageTitle({
   eyebrow,
   title,
@@ -30,6 +33,7 @@ export function PageTitle({
     </div>
   );
 }
+// Skeleton placeholder shown while page data loads.
 export function Loading() {
   return (
     <div

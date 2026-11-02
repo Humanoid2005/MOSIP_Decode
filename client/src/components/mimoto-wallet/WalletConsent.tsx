@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { mimotoApi } from "../../services/mimoto-wallet/MimotoApi";
 import { ErrorNotice } from "../ui";
+// Consent step of the embedded wallet during verification. The user first
+// reviews which verifier is asking and which credential from this run would
+// be shared; nothing leaves the wallet until they approve. Inji Verify's
+// verdict then arrives through the normal run updates.
 export function WalletConsent({ runId }: { runId: string }) {
   const cache = useQueryClient();
   const prepare = useMutation({ mutationFn: () => mimotoApi.prepare(runId) });

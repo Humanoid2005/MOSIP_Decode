@@ -15,6 +15,9 @@ import {
   walletName,
 } from "../services/presentation";
 import { ErrorNotice, Loading, PageTitle } from "../components/ui";
+// Run history at /history: totals, then the runs the server still holds in
+// memory, filterable by outcome, format, scenario and stack version. Choosing
+// a run opens it in the inspector; each row also links to its JSON report.
 export function HistoryPage() {
   const runs = useRuns();
   const select = useWorkspace((state) => state.selectRun);

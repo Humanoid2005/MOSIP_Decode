@@ -1,4 +1,6 @@
 import { Component, type ReactNode } from "react";
+// Catches rendering errors anywhere in the app and offers a reload. Runs live
+// on the server, so a run in progress is picked up again after the reload.
 export class ErrorBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }

@@ -4,11 +4,17 @@ import { root, properties, definitionIds, playgroundOrigin } from "./Configurati
 
 const copyFile = async (source, destination) => writeFile(destination, await readFile(source));
 
+// Renders the configuration the Inji services and the playground read: Spring
+// properties for Certify, Mimoto and DataShare, Mimoto's issuer and trusted
+// verifier lists, Verify's DID settings, public assets, and the env files for
+// Compose and the playground server.
 export class AssetRenderer {
   constructor(configuration) {
     this.config = configuration;
   }
 
+  // config/ is mounted as the services' Spring configuration directory and
+  // public/ is served by the config server and the gateway.
   async render(output) {
     const { origin, issuerDid, verifierDid, localOrigin, values, mobile } =
       this.config;
@@ -17,6 +23,9 @@ export class AssetRenderer {
     const publicPath = resolve(output, "public");
     await mkdir(destination, { recursive: true });
     await mkdir(publicPath, { recursive: true });
+    // Overrides per upstream properties file. ${...} placeholders are left for
+    // Spring to resolve from the container environment, so no secret is
+    // written into the rendered files.
     const replacements = {
       "certify-default.properties": {
         "spring.datasource.password": "${POSTGRES_PASSWORD}",
@@ -28,6 +37,7 @@ export class AssetRenderer {
         "mosip.certify.authorization.url": values.AUTHORIZATION_ISSUER_URL,
         "mosip.certify.authn.issuer-uri": values.AUTHORIZATION_ISSUER_URL,
         "mosip.certify.authn.jwk-set-uri": values.AUTHORIZATION_JWKS_URL,
+        // An inline list literal; single quotes inside it are doubled.
         "mosip.certify.authn.allowed-audiences":
           "{ '" +
           values.AUTHORIZATION_CREDENTIAL_AUDIENCE.replaceAll("'", "''") +
@@ -39,6 +49,8 @@ export class AssetRenderer {
       },
       "certify-csvdp-farmer.properties": {
         "mosip.certify.data-provider-plugin.did-url": issuerDid,
+        // Selects the synthetic farmer provider (images/certify) instead of the
+        // upstream CSV provider.
         ...(values.INJI_LOCAL_DEVELOPMENT === "true" ? {
           "mosip.certify.integration.data-provider-plugin": "PlaygroundSyntheticFarmerProvider",
         } : {}),
@@ -49,6 +61,8 @@ export class AssetRenderer {
         "mosipbox.public.url": origin,
         "mosip.esignet.host": values.AUTHORIZATION_ORIGIN,
         "mosip.inji.web.url": origin,
+        // Mimoto sends the browser to the workbench's login-return page after
+        // a wallet login.
         ...(values.INJI_LOCAL_DEVELOPMENT === "true" ? {
           "mosip.inji.web.authentication.success.redirect.url": origin + "/playground/login-return",
         } : {}),
@@ -79,6 +93,8 @@ export class AssetRenderer {
         "mosip.data.share.protocol": "https",
         "logging.level.org.springframework.web": "INFO",
       },
+      // DataShare's static policy stores shares unencrypted, which suits only
+      // synthetic development credentials.
       "data-share-standalone.properties": {
         "mosip.data.share.static-policy.policy-json": JSON.stringify({
           typeOfShare: "",
@@ -90,6 +106,10 @@ export class AssetRenderer {
         }),
       },
     };
+    // Disables Mimoto's HSM health probe, which does not fit the wallet's RSA
+    // keys (gap M9; WalletKeyHealthIndicator replaces it), and points Mimoto's
+    // Google login registration at local Keycloak, so Inji Web's Google button
+    // signs in with a local account.
     if (values.INJI_LOCAL_DEVELOPMENT === "true") {
       const auth = values.AUTHORIZATION_ISSUER_URL + "/protocol/openid-connect";
       Object.assign(replacements["mimoto-default.properties"], {
@@ -116,11 +136,15 @@ export class AssetRenderer {
       resolve(source, "credential-template.html"),
       resolve(publicPath, "credential-template.html"),
     );
+    // The upstream context file is empty (gap C4); the restored copy must
+    // define @context before it is published.
     const farmerContext = await readFile(resolve(root, "infra/inji/upstream/context/farmer.json"), "utf8");
     if (!JSON.parse(farmerContext)["@context"]) throw new Error("Farmer JSON-LD context is missing.");
     await writeFile(resolve(publicPath, "farmer.json"), farmerContext);
     await copyFile(resolve(source, "mosip-cbeff.xsd"), resolve(publicPath, "mosip-cbeff.xsd"));
     await copyFile(resolve(root, "infra/inji/config/farmer-logo.svg"), resolve(publicPath, "farmer-logo.svg"));
+    // Mimoto's registry entry for the Farmer issuer. Token requests go through
+    // Mimoto's get-token endpoint to Keycloak as the configured wallet client.
     const issuer = {
       credential_issuer: "Farmer",
       issuer_id: "Farmer",
@@ -146,6 +170,8 @@ export class AssetRenderer {
       wellknown_endpoint:
         origin + "/v1/certify/issuance/.well-known/openid-credential-issuer",
     };
+    // Mimoto trusts Verify's DID only for signed requests whose responses go
+    // to Verify's direct-post endpoint.
     const verifiers = {
       verifiers: [
         {
@@ -156,6 +182,8 @@ export class AssetRenderer {
         },
       ],
     };
+    // Written to both folders: the config server serves public/ and the
+    // services mount config/.
     for (const [file, value] of Object.entries({
       "mimoto-issuers-config.json": { issuers: [issuer] },
       "mimoto-trusted-verifiers.json": verifiers,
@@ -169,6 +197,8 @@ export class AssetRenderer {
       resolve(publicPath, "credential-template.html"),
       resolve(destination, "credential-template.html"),
     );
+    // Verify's keystore, and the DID and public key ID it publishes at
+    // /v1/verify/did.json.
     await writeFile(
       resolve(destination, "verify.properties"),
       [
@@ -178,6 +208,9 @@ export class AssetRenderer {
         "",
       ].join("\n"),
     );
+    // Playground server settings. playground.env is for a server run on the
+    // host (npm run dev:server), which reaches the services through the
+    // loopback gateway.
     const environment = {
       INJI_CERTIFY_URL: localOrigin + "/v1/certify/issuance",
       INJI_ISSUER_URL: origin,
@@ -215,6 +248,8 @@ export class AssetRenderer {
         .map(([key, value]) => key + "=" + JSON.stringify(value))
         .join("\n") + "\n",
     );
+    // The containerised playground server reaches the services directly on
+    // the Compose network.
     await writeFile(
       resolve(output, "playground.docker.env"),
       Object.entries({ ...environment,

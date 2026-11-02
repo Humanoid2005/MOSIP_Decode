@@ -18,6 +18,8 @@ const sha256 = (value) => createHash("sha256").update(value).digest();
 const json = (value) => b64(JSON.stringify(value));
 
 export class InjiMobileSimulator {
+  // Each instance has its own P-256 holder key. Redirects are not followed,
+  // because sign-in reads the code from the redirect to the app.
   constructor(request = fetch) {
     this.request = (url, init = {}) =>
       request(url, { redirect: "manual", signal: AbortSignal.timeout(20000), ...init });
@@ -39,6 +41,8 @@ export class InjiMobileSimulator {
       throw new Error("Batch offers are rejected.");
     const issuer = await this.json(offer.credential_issuer + "/.well-known/openid-credential-issuer");
     const configuration = issuer.credential_configurations_supported[offer.credential_configuration_ids[0]];
+    // The app uses the single advertised authorization server and requires its
+    // metadata to name exactly that issuer.
     const server = issuer.authorization_servers?.length === 1
       ? issuer.authorization_servers[0]
       : offer.grants?.authorization_code?.authorization_server ?? offer.credential_issuer;
@@ -104,6 +108,9 @@ export class InjiMobileSimulator {
     const [header, payload] = jar.split(".").slice(0, 2).map((part) => JSON.parse(Buffer.from(part, "base64url")));
     if (header.alg !== "EdDSA" || !header.kid?.startsWith(clientId + "#"))
       throw new Error("Request object must be EdDSA-signed by the verifier DID.");
+    // Resolves did:web:host[:path] to https://host/path/did.json, or to
+    // /.well-known/did.json without a path, and verifies the request object
+    // with the key its kid names.
     const [, , host, ...path] = clientId.split(":").map(decodeURIComponent);
     const document = await this.json(
       `https://${[host, ...(path.length ? path : [".well-known"])].join("/")}/did.json`,
@@ -111,6 +118,7 @@ export class InjiMobileSimulator {
     const method = document.verificationMethod?.find((item) => item.id === header.kid);
     const key = base58(method?.publicKeyMultibase?.slice(1) ?? "");
     const [signed, signature] = [jar.slice(0, jar.lastIndexOf(".")), jar.slice(jar.lastIndexOf(".") + 1)];
+    // A multibase Ed25519 key is a two-byte multicodec prefix and 32 key bytes.
     const valid = key.length === 34 && verify(
       null,
       Buffer.from(signed),
@@ -123,6 +131,8 @@ export class InjiMobileSimulator {
     return payload;
   }
 
+  // Presents the whole SD-JWT with a Key Binding JWT bound to the request's
+  // nonce and audience, and posts it to the verifier's response URI.
   async presentSdJwt(presentationUri, credential) {
     const request = await this.authenticateRequest(presentationUri);
     const presented = credential.endsWith("~") ? credential : credential + "~";
@@ -181,6 +191,7 @@ export class InjiMobileSimulator {
     return code;
   }
 
+  // ES256 with the holder key; JOSE needs the raw r||s signature encoding.
   signJwt(header, payload) {
     const input = `${json({ ...header, alg: "ES256" })}.${json(payload)}`;
     return `${input}.${b64(sign("sha256", Buffer.from(input), { key: this.holder.privateKey, dsaEncoding: "ieee-p1363" }))}`;
@@ -190,6 +201,7 @@ export class InjiMobileSimulator {
     return this.expectJson(await this.request(url, { headers: { accept: "application/json" } }), new URL(url).pathname);
   }
 
+  // Fails with the status and the start of the body on a non-2xx response.
   async expectJson(response, label) {
     const text = await response.text();
     if (!response.ok) throw new Error(`${label} returned HTTP ${response.status}: ${text.slice(0, 300)}`);
@@ -197,6 +209,8 @@ export class InjiMobileSimulator {
   }
 }
 
+// Decodes base58btc, the encoding behind the multibase "z" prefix that the
+// caller strips. Returns an empty buffer for invalid input.
 function base58(value) {
   const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   let number = 0n;

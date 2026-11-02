@@ -5,11 +5,21 @@ import type { TestRun } from "../../models/dtos.js";
 import type { ObservedHttpClient } from "../telemetry/ObservedHttpClient.js";
 import { AppError, object, requiredString } from "../errors.js";
 import { presentationUri } from "./PresentationRequest.js";
+// Drives Inji Verify for a run: creates the OpenID4VP request, polls its
+// status, and turns Verify's v2 result into a verdict with per-check evidence.
+// mDoc, which Verify cannot receive over OpenID4VP (gap V4), goes to its
+// direct credential check instead.
 export class InjiVerifierAdapter implements VerifierAdapter {
   constructor(
     private readonly http: ObservedHttpClient,
     private readonly scenarios: ScenarioService,
   ) {}
+  // Creates the Verify request from the presentation definition configured
+  // for the run's format, with the run ID as Verify's transaction ID. The
+  // workbench generates the nonce and records it with the definition actually
+  // requested, which a request-side scenario may have altered, so the
+  // playground can check the submission itself; Verify does not enforce the
+  // nonce (gap V1).
   async create(run: TestRun) {
     const env = run.environment;
     if (!env.verifyUrl || !env.verifierClientId)
@@ -53,6 +63,8 @@ export class InjiVerifierAdapter implements VerifierAdapter {
       uri: presentationUri(payload, run),
     };
   }
+  // Polls the request status. Identical consecutive answers are coalesced into
+  // one inspector event so polling does not crowd out earlier evidence.
   async status(run: TestRun): Promise<string> {
     const result = object(
       await this.http.json(
@@ -65,6 +77,11 @@ export class InjiVerifierAdapter implements VerifierAdapter {
     );
     return requiredString(result.status, "status");
   }
+  // Fetches Verify's v2 result for the run's transaction and maps it to a
+  // verdict. The result must cover exactly one credential with detailed
+  // checks; anything incomplete or self-contradictory is a 502, never a pass.
+  // EXPIRED is reported when the expiry check fails on a credential whose
+  // signature passed.
   async result(run: TestRun) {
     const payload = object(
       await this.http.json(
@@ -91,6 +108,8 @@ export class InjiVerifierAdapter implements VerifierAdapter {
     const result = object(payload.credentialResults[0]);
     const checks: import("../../models/verification.js").VerificationCheck[] =
       [];
+    // A check is PASS or FAIL only when Verify states its validity explicitly;
+    // a missing check is NOT_CHECKED, not a pass.
     for (const [id, label, value] of [
       [
         "issuer-signature",
@@ -120,6 +139,8 @@ export class InjiVerifierAdapter implements VerifierAdapter {
           : {}),
       });
     }
+    // No statusCheck list means Verify did not report status; an empty list
+    // means the credential had no status entry to check.
     const statuses = Array.isArray(result.statusCheck)
       ? result.statusCheck
       : undefined;
@@ -141,6 +162,8 @@ export class InjiVerifierAdapter implements VerifierAdapter {
           ? "No credential status entry was checked; this is not evidence of revocation support."
           : undefined,
     });
+    // An overall success must agree with the credential's own result and with
+    // every individual check.
     if (
       typeof result.allChecksSuccessful !== "boolean" ||
       (payload.allChecksSuccessful &&
@@ -160,6 +183,9 @@ export class InjiVerifierAdapter implements VerifierAdapter {
             "PASS"
         ? ("EXPIRED" as const)
         : ("INVALID" as const);
+    // The returned credential is later matched against those issued and
+    // submitted in this run, so a verdict on another credential is not
+    // attributed to it.
     if (
       typeof result.verifiableCredential !== "string" ||
       !result.verifiableCredential

@@ -3,7 +3,11 @@ import type { TestRun } from "../../models/dtos.js";
 import { AppError, object } from "../errors.js";
 import { credentialFingerprint } from "../run-service/credentialFingerprint.js";
 import { decodeJwt } from "./jws.js";
+// Authentication of Inji Verify's signed request object, which the mock wallet
+// performs before it shares any credential.
 
+// Decodes base58btc, the encoding behind a "z" multibase key. Leading "1"
+// characters stand for leading zero bytes.
 function base58(value: string): Buffer {
   const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   let number = 0n;
@@ -19,6 +23,10 @@ function base58(value: string): Buffer {
   ]);
 }
 
+// Derives the verifier's public API base from its did:web client ID
+// (did:web:host:path becomes https://host/path). The mock wallet accepts
+// request and response URIs only under this base instead of trusting URLs
+// handed to it.
 export function verifierPublicBase(run: TestRun): string {
   const did = run.environment.verifierClientId;
   if (!did.startsWith("did:web:"))
@@ -33,6 +41,13 @@ export function verifierPublicBase(run: TestRun): string {
     .join("")}`;
 }
 
+// Verifies the request object (an EdDSA "oauth-authz-req+jwt" with no
+// critical extensions) against an authentication key in the configured
+// verifier's DID document, then checks that it is bound to this run: issuer
+// and client ID, state, the nonce and presentation definition the workbench
+// recorded, a direct_post response URI under the verifier's base, and an iat
+// within the run's lifetime (60 seconds of skew) with any exp still in the
+// future. Any failure throws the same 502.
 export function verifyRequest(token: string, document: unknown, run: TestRun) {
   try {
     const { header, payload } = decodeJwt(token);
@@ -58,6 +73,7 @@ export function verifyRequest(token: string, document: unknown, run: TestRun) {
       !method.publicKeyMultibase.startsWith("z")
     )
       throw new Error();
+    // An Ed25519 multikey: the 0xed01 multicodec prefix and a 32-byte key.
     const key = base58(method.publicKeyMultibase.slice(1));
     if (key.length !== 34 || key[0] !== 0xed || key[1] !== 0x01)
       throw new Error();

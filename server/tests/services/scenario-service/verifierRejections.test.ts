@@ -15,6 +15,8 @@ import { ScenarioService } from "../../../services/scenario-service/ScenarioServ
 import { TelemetryService } from "../../../services/telemetry/TelemetryService.js";
 import { issueSdJwt } from "../../credentials.js";
 import { check, testRun, verifierDid } from "../../fixtures.js";
+// Scoring of SD-JWT verifier-side scenarios (WRONG_NONCE and the request
+// mismatches) using real presentations and the playground's checks.
 
 // Mirrors migration 005: the local SD-JWT definition has no format or fields.
 const definition = {
@@ -77,6 +79,8 @@ function verifiedRun(
     }),
   });
   const run = dao.get("run-1");
+  // MockWalletService records the nonce change as applied when it presents;
+  // this helper builds the presentation directly.
   if (scenario === "WRONG_NONCE")
     run.scenarioEvidence = { ...run.scenarioEvidence, applied: true };
   return {

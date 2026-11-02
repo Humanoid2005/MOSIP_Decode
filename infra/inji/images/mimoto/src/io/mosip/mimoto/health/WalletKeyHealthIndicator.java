@@ -5,6 +5,9 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
+// Mimoto health contributor "walletKey". The upstream HSM probe assumes a
+// symmetric key stored in the HSM and is disabled locally (gap M9); this
+// indicator checks the wallet's real encryption service instead.
 @Component("walletKey")
 public final class WalletKeyHealthIndicator implements HealthIndicator {
     private final EncryptionService encryption;
@@ -13,6 +16,8 @@ public final class WalletKeyHealthIndicator implements HealthIndicator {
         this.encryption = encryption;
     }
 
+    // UP only if a fixed value encrypts and decrypts back unchanged. Exception
+    // details are kept out of the health response.
     @Override
     public Health health() {
         try {

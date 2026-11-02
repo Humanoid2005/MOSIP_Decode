@@ -6,8 +6,15 @@ import type {
 } from "../../models/MimotoSession.js";
 import type { MimotoClient } from "./MimotoClient.js";
 import { AppError, object, requiredString } from "../errors.js";
+// OpenID4VCI issuance into the embedded wallet. The workbench starts the
+// authorization code flow with PKCE; Mimoto redeems the code, proves key
+// possession to the issuer and stores the credential.
 export class MimotoIssuanceService {
   constructor(private readonly client: MimotoClient) {}
+  // Finds the run's issuer and credential configuration as Mimoto has them
+  // onboarded, then builds the authorization URL. The first call checks that
+  // the wallet is unlocked before anything else is requested. State and the
+  // PKCE verifier stay on the server-side session and expire after ten minutes.
   async authorize(
     run: TestRun,
     session: MimotoSession,
@@ -84,6 +91,9 @@ export class MimotoIssuanceService {
     session.authorization = authorization;
     return { url: url.toString() };
   }
+  // Checks the callback's state against the pending authorization and clears
+  // it before calling Mimoto, so a code can be used only once. Mimoto returns
+  // the stored credential ID only after the credential is saved.
   async complete(
     run: TestRun,
     session: MimotoSession,

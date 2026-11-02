@@ -5,6 +5,8 @@ import {
   tunnelOrigin,
 } from "../mobile/MobileIdentity.mjs";
 
+// Covers the SQL that moves Certify's stored identity to a new origin and the
+// parsing of quick-tunnel URLs from cloudflared logs.
 test("moves exact origin and did:web prefixes only", () => {
   const sql = identitySql(
     "https://inji.127.0.0.1.sslip.io",

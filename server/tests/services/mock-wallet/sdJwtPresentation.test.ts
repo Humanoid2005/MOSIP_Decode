@@ -9,6 +9,8 @@ import {
 } from "../../../services/mock-wallet/jws.js";
 import { presentSdJwt } from "../../../services/mock-wallet/sdJwtPresentation.js";
 import { issueSdJwt } from "../../credentials.js";
+// The mock wallet's SD-JWT presentation with a Key Binding JWT, and its JWS
+// helpers.
 
 test("binds every disclosure to the audience and nonce with a valid KB-JWT", () => {
   const holder = createHolderKey();

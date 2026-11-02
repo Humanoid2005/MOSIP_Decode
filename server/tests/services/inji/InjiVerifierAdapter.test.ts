@@ -3,7 +3,11 @@ import { test } from "node:test";
 import { InjiVerifierAdapter } from "../../../services/inji/InjiVerifierAdapter.js";
 import type { ObservedHttpClient } from "../../../services/telemetry/ObservedHttpClient.js";
 import { testRun } from "../../fixtures.js";
+// InjiVerifierAdapter.checkCredential(): the direct /v2/vc-verification call
+// used for mDoc (gap V4) and how its response is read.
 
+// An adapter over a stub HTTP client that records each call and returns the
+// given response.
 function adapter(response: unknown, calls: unknown[][] = []) {
   const http = {
     json: async (...args: unknown[]) => {
@@ -24,6 +28,7 @@ test("the direct credential check posts the mDoc to Verify's v2 endpoint", async
     calls[0]![0],
     "https://verifier.test/v1/verify/v2/vc-verification",
   );
+  // The fourth argument of http.json() is the request body.
   assert.deepEqual(calls[0]![3], {
     verifiableCredential: "mdoc",
     includeClaims: false,

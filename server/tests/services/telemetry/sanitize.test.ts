@@ -6,6 +6,8 @@ import {
   safeEndpoint,
   sanitize,
 } from "../../../services/telemetry/sanitize.js";
+// Telemetry sanitization: secret redaction, depth and size limits, body
+// parsing and endpoint scrubbing.
 
 test("redacts secret fields at any depth and in any case", () => {
   const result = sanitize({

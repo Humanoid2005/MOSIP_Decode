@@ -5,6 +5,11 @@ import type { ProtocolEvent } from "../../models/playground";
 import { decodePayload } from "../../services/decodePayload";
 import { cn } from "../../services/cn";
 import { copyText } from "../../services/clipboard";
+// Shows one captured event's request or response as JSON, in the protocol
+// inspector and under the sequence diagram. The server redacts tokens, codes
+// and other secrets before storing events. The decode toggle expands JWTs and
+// SD-JWTs for reading only; copy and the full-screen view use whichever form
+// is on screen.
 export function PayloadView({ event }: { event: ProtocolEvent }) {
   const [side, setSide] = useState<"request" | "response">("response");
   const [decoded, setDecoded] = useState(false);

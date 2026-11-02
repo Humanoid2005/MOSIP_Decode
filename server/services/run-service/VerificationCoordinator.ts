@@ -3,12 +3,18 @@ import type { RunDao } from "../../models/contracts.js";
 import type { VerificationService } from "./VerificationService.js";
 import { AppError } from "../errors.js";
 
+// Background poller that collects the verifier result for the active run, so
+// a presentation is scored even when no browser has the workbench open.
 export class VerificationCoordinator {
   constructor(
     private readonly dao: RunDao,
     private readonly verification: VerificationService,
   ) {}
 
+  // Starts when the server begins listening and stops when it closes. Every
+  // 3 s it refreshes the active run if that run is VERIFYING; after a failed
+  // refresh the next check waits 15 s. The timer is unref'd so it never keeps
+  // the process alive.
   attach(server: Server): void {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;

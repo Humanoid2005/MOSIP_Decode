@@ -5,6 +5,9 @@ import type { ObservedHttpClient } from "../telemetry/ObservedHttpClient.js";
 export function offerUri(offer: Record<string, unknown>): string {
   return `openid-credential-offer://?credential_offer=${encodeURIComponent(JSON.stringify(offer))}`;
 }
+// Prepares the credential offer for a wallet that starts issuance from an
+// offer. It builds one from issuer metadata or validates one the user pasted,
+// and always returns it in the encoding Inji Mobile can parse.
 export class OfferService {
   constructor(private readonly http: ObservedHttpClient) {}
   // An offer without grants tells the wallet to use the authorization code
@@ -24,6 +27,11 @@ export class OfferService {
     };
     return { uri: offerUri(offer), offer };
   }
+  // Validates an offer pasted as JSON or as an openid-credential-offer URI, by
+  // value or by reference. A referenced offer is fetched only from under the
+  // configured issuer URL, so a pasted link cannot make the server request
+  // arbitrary hosts. The offer must name the configured issuer and include the
+  // run's credential configuration.
   async resolve(
     input: string,
     run: TestRun,

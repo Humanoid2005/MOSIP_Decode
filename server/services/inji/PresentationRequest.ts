@@ -1,5 +1,7 @@
 import { AppError, object, requiredString } from "../errors.js";
 import type { TestRun } from "../../models/dtos.js";
+// Parses a URL returned by Verify. A malformed one is the verifier's fault,
+// so it is reported as 502 rather than as a server error.
 function verifierUrl(value: string, label: string, base?: string): URL {
   try {
     return new URL(value, base);
@@ -7,6 +9,11 @@ function verifierUrl(value: string, label: string, base?: string): URL {
     throw new AppError(502, `Verifier returned an invalid ${label}.`);
   }
 }
+// Builds the openid4vp://authorize link a wallet opens to answer the run's
+// Inji Verify request. When Verify returns a request URI, the request is
+// passed by reference with the verifier's client ID. Otherwise every
+// parameter is sent by value: the Verify request ID as state, and the
+// presentation definition inline or as a URI resolved against the Verify base.
 export function presentationUri(
   payload: Record<string, unknown>,
   run: TestRun,
@@ -43,6 +50,8 @@ export function presentationUri(
         "presentation_definition",
         JSON.stringify(object(details.presentationDefinition)),
       );
+    // Presentation formats and signature algorithms declared on the
+    // verifier's behalf, which the wallet uses when choosing what to present.
     query.set(
       "client_metadata",
       JSON.stringify({

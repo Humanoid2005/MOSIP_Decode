@@ -3,11 +3,16 @@ import type { HttpTransport } from "../../models/contracts.js";
 import type { MimotoContext } from "../../models/MimotoSession.js";
 import type { TelemetryService } from "../telemetry/TelemetryService.js";
 import { AppError, UpstreamError } from "../errors.js";
+// HTTP client for Mimoto's wallet API, called on behalf of the signed-in
+// browser. It forwards the browser's session cookie and CSRF token, so Mimoto
+// applies its own authentication exactly as it would for Inji Web.
 export class MimotoClient {
   constructor(
     private readonly http: HttpTransport,
     private readonly telemetry: TelemetryService,
   ) {}
+  // Identifies the wallet session by a hash of its session cookie, so runs can
+  // be tied to a session without storing the cookie itself.
   owner(context: MimotoContext): string {
     const session = context.cookie
       .split(/;\s*/)
@@ -15,6 +20,11 @@ export class MimotoClient {
     if (!session) throw new AppError(401, "Sign in to the Inji wallet first.");
     return createHash("sha256").update(session).digest("hex");
   }
+  // Sends one request to Mimoto and passes any refreshed cookies back to the
+  // browser. Calls made for a run are recorded as wallet events in its
+  // telemetry. Non-2xx responses become UpstreamError with Mimoto's own error
+  // code and message. Accept-Language is fixed to "en" because Mimoto rejects
+  // a browser's language list (gap M5).
   async send(
     base: string,
     path: string,

@@ -4,6 +4,8 @@ import {
   credentialFingerprint,
   matchesCredentialFormat,
 } from "../../../services/run-service/credentialFingerprint.js";
+// credentialFingerprint() and matchesCredentialFormat() for JSON-LD and
+// SD-JWT credentials.
 
 const credential = {
   "@context": ["https://www.w3.org/2018/credentials/v1"],

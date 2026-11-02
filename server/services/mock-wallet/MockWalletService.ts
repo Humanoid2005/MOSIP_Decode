@@ -23,6 +23,8 @@ function upstream(value: unknown, name: string): string {
     throw new AppError(502, `The response is missing ${name}.`);
   return value.trim();
 }
+// Formats the mock wallet can hold and present; RunService refuses mock-wallet
+// runs for any other format.
 export const mockWalletFormats = ["vc+sd-jwt", "dc+sd-jwt"];
 // A minimal OpenID4VCI / OpenID4VP holder used to test Inji modules against a
 // non-Inji wallet. It uses public endpoints only, so its wire traffic passes
@@ -38,6 +40,10 @@ export class MockWalletService {
     private readonly redirectUri: string,
     private readonly scenarios: ScenarioService,
   ) {}
+  // Starts wallet-initiated issuance: reads the issuer and authorization
+  // server metadata, opens a session with a fresh holder key, state and PKCE
+  // verifier, and returns the authorization URL for the user to open. The
+  // token and credential endpoints are taken from the metadata.
   async authorize(runId: string): Promise<{ url: string }> {
     const run = this.walletRun(runId, "ISSUING");
     const issuer = object(
@@ -90,6 +96,11 @@ export class MockWalletService {
     this.record(runId, "Mock wallet authorization request", parameters, null);
     return { url: `${endpoint}?${new URLSearchParams(parameters)}` };
   }
+  // Handles the authorization callback: redeems the code with the PKCE
+  // verifier, proves possession of the holder key and requests the
+  // credential. The proof nonce is the c_nonce returned with the access token,
+  // since Certify has no Nonce Endpoint (gap C1). The credential's fingerprint
+  // is kept for correlating Verify's result, and the run moves to HELD.
   async complete(state: string, code: string): Promise<TestRun> {
     const session = this.sessions.findByState(state);
     if (!session)
@@ -151,6 +162,12 @@ export class MockWalletService {
       "MOCK_WALLET",
     );
   }
+  // Answers the run's verifier request. The request URI must be the one
+  // derived from the verifier's did:web, and the signed request object must
+  // pass verifyRequest before anything is shared; a failure fails the run at
+  // the request stage. The wallet then discloses every claim with a KB-JWT and
+  // posts the presentation with direct_post. Scenarios that tamper with the
+  // credential or the nonce are applied here rather than by the bridge.
   async present(runId: string): Promise<TestRun> {
     const run = this.walletRun(runId, "VERIFYING");
     const session = this.sessions.get(runId);
@@ -235,6 +252,8 @@ export class MockWalletService {
           },
         ],
       });
+    // The vp_token is the SD-JWT itself, hence the "$" path, and the
+    // descriptor ID refers to the request's first input descriptor.
     const submission = {
       id: randomUUID(),
       definition_id: upstream(definition.id, "presentation_definition.id"),
@@ -256,6 +275,8 @@ export class MockWalletService {
       },
       null,
     );
+    // A 4xx other than 429 is the verifier rejecting the presentation and
+    // fails the run; outages and rate limiting are passed to the caller.
     try {
       await this.send(
         upstream(request.response_uri, "response_uri"),
@@ -287,6 +308,7 @@ export class MockWalletService {
     }
     return this.dao.get(runId);
   }
+  // Loads the run and refuses actions for other wallets or the wrong phase.
   private walletRun(runId: string, phase: TestRun["phase"]): TestRun {
     const run = this.dao.get(runId);
     if (run.wallet !== "MOCK_WALLET")
@@ -301,6 +323,9 @@ export class MockWalletService {
   private json(url: string, title: string): Promise<unknown> {
     return this.send(url, title);
   }
+  // Sends one request over the plain transport, as an external wallet would;
+  // the bridge records the protocol exchanges, not this service. A non-2xx
+  // answer becomes UpstreamError.
   private async send(
     url: string,
     title: string,
@@ -336,6 +361,8 @@ export class MockWalletService {
       );
     return response.body;
   }
+  // Adds a wallet-side step with no HTTP exchange of its own, such as the
+  // signed proof or the built presentation, to the run's timeline.
   private record(
     runId: string,
     title: string,

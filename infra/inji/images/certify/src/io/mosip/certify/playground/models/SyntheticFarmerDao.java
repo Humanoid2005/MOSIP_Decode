@@ -4,6 +4,8 @@ import javax.sql.DataSource;
 import org.json.JSONObject;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+// Stores one synthetic farmer record per authenticated subject in
+// certify.playground_synthetic_farmer (migration 006).
 public final class SyntheticFarmerDao {
     private final JdbcTemplate database;
 
@@ -11,6 +13,9 @@ public final class SyntheticFarmerDao {
         database = new JdbcTemplate(source);
     }
 
+    // Inserts the initial record unless the subject already has one, then
+    // returns the stored row. Concurrent first issuances therefore converge on
+    // one record, and later issuances return it unchanged.
     public JSONObject findOrCreate(String subject, JSONObject initialRecord) {
         database.update("INSERT INTO certify.playground_synthetic_farmer (subject_id, record) "
                 + "VALUES (?, ?::jsonb) ON CONFLICT (subject_id) DO NOTHING", subject, initialRecord.toString());

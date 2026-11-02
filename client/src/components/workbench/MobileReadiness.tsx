@@ -1,6 +1,9 @@
 import { Smartphone, TriangleAlert } from "lucide-react";
 import { phoneReachability } from "../../../../server/models/mobile";
 
+// Shown in the flow form when Inji Mobile is chosen. Says whether a phone can
+// reach and trust the issuer URL; if not, it points to the script that
+// publishes the wallet endpoints on a temporary public HTTPS URL.
 export function MobileReadiness({ issuerUrl }: { issuerUrl: string }) {
   const { reachable, reason } = phoneReachability(issuerUrl);
   return reachable ? (

@@ -5,6 +5,8 @@ import {
   scenarios,
   scenarioUnavailable,
 } from "../../models/scenarios.js";
+// mDoc availability: negative scenarios are refused (gap V4), and the
+// Mimoto-backed wallets cannot download mDoc (gap M12).
 
 test("only the normal flow is available for mDoc", () => {
   for (const scenario of scenarios)

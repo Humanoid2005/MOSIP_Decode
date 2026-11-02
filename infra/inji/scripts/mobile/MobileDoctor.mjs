@@ -3,6 +3,9 @@ import { mobileClientId, mobileRedirectUri } from "../RealmRenderer.mjs";
 // Replays, over the public origin, the lookups Inji Mobile 0.22 makes before
 // and during issuance and presentation, and confirms local-only paths are closed.
 export class MobileDoctor {
+  // request is fetch or a test stub; signingDids returns the DIDs Certify signs
+  // with. Redirects are not followed, so each check sees the public listener's
+  // own response.
   constructor(configuration, request, signingDids) {
     this.config = configuration;
     this.signingDids = signingDids;
@@ -10,6 +13,8 @@ export class MobileDoctor {
       request(url, { redirect: "manual", signal: AbortSignal.timeout(15000), ...init });
   }
 
+  // Runs every check and records its outcome; one failure does not stop the
+  // others.
   async run() {
     const results = [];
     for (const [name, check] of this.checks()) {
@@ -22,6 +27,7 @@ export class MobileDoctor {
     return results;
   }
 
+  // Each check returns a detail on success or throws with the reason.
   checks() {
     const { origin, issuerDid, verifierDid, values } = this.config;
     const authorizationServer = values.AUTHORIZATION_ISSUER_URL;
@@ -48,6 +54,8 @@ export class MobileDoctor {
         return metadata.token_endpoint;
       }],
       ["Inji Mobile client", async () => {
+        // Keycloak shows its login form only when the client and redirect URI
+        // are registered. The PKCE challenge is the RFC 7636 example value.
         const url = new URL(authorizationServer + "/protocol/openid-connect/auth");
         for (const [key, value] of Object.entries({
           client_id: mobileClientId,
@@ -87,6 +95,9 @@ export class MobileDoctor {
         return "reachable";
       }],
       ["Local-only paths closed", async () => {
+        // Each must return 404 through the public listener. The last path uses
+        // a ";" segment, which the Java services would resolve differently from
+        // nginx.
         const open = [];
         for (const [path, method] of [
           ["/auth/admin/master/console/", "GET"],

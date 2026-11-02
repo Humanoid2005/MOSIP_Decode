@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { AppError } from "../../../services/errors.js";
 import { OfferService } from "../../../services/run-service/OfferService.js";
 import { testRun } from "../../fixtures.js";
+// OfferService: authorization code offers for Inji Mobile and re-encoding of
+// pasted offers so they survive its query parsing (gap W2).
 
 const offers = new OfferService({} as never);
 const run = testRun({
@@ -43,6 +45,7 @@ test("survives Inji Mobile's naive query parsing for awkward values", () => {
     configuration: { ...run.configuration, id: "Farmer=Credential&x" },
   });
   const { uri, offer } = offers.authorizationCodeOffer(awkward);
+  // Only the separator after credential_offer may remain unencoded.
   assert.equal(uri.split("=").length, 2);
   assert.deepEqual(parseLikeInjiMobile(uri), offer);
 });
